@@ -1,0 +1,27 @@
+version: 3
+
+tasks:
+  prettify:
+    desc: Prettify all files
+    cmds:
+      - npm run prettier:write
+
+  lintall:
+    desc: Lint all files
+    cmds:
+      - npm run lint
+      - npm run prettier:check
+
+  build:
+    desc: Build the frontend
+    cmds:
+      - npm install
+      - npm run build
+      - npm run export
+
+  all:
+    desc: Run all tasks
+    cmds:
+      - task prettify
+      - task lintall
+      - task build

@@ -1,0 +1,59 @@
+version: '3'
+
+dotenv: ['.vadikk.com.env']
+
+includes:
+  backend:
+    taskfile: ./backend/taskfile.yaml
+    dir: ./backend
+
+  frontend:
+    taskfile: ./frontend/taskfile.yaml
+    dir: ./frontend
+
+  infra:
+    taskfile: ./infra/taskfile.yaml
+    dir: ./infra
+
+tasks:
+  'image:build':
+    desc: Build the docker image
+    env:
+      BUILDKIT_PROGRESS: plain
+    cmds:
+      - echo "Building {{.IMG_NAME}}:latest"
+      - docker build -t {{.IMG_NAME}}:latest -f Dockerfile .
+
+  'image:run':
+    desc: Run the docker image
+    cmds:
+      - docker run --rm -p 8000:8000 {{.IMG_NAME}}:latest
+
+  'image:console':
+    desc: Console into the docker image
+    cmds:
+      - docker run -it --rm -p 8000:8000 {{.IMG_NAME}}:latest sh
+
+  build:
+    desc: Build the app
+    cmds:
+      - task: frontend:build
+      - task: image:build
+
+  deploy:
+    desc: Deploy the app
+    cmds:
+      - task: infra:deploy
+
+  lintall:
+    desc: Lint the app
+    cmds:
+      - task: frontend:lintall
+      - task: backend:lintall
+
+  all:
+    desc: Build and deploy the app
+    cmds:
+      - task: lintall
+      - task: build
+      - task: deploy

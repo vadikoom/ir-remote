@@ -1,0 +1,27 @@
+version: 3
+
+tasks:
+  upload:
+    desc: Upload the docker image to the remote machine using SSH
+    cmds:
+      - docker save {{.IMG_NAME}}:latest | ssh {{.UPLOAD_VIA}} 'docker load'
+
+  scp:
+    desc: desc copy env and docker-compose files to remote machine
+    cmds:
+      - ssh {{.UPLOAD_VIA}} 'mkdir -p {{.REMOTE_DIR_NAME}}'
+      - scp .env {{.UPLOAD_VIA}}:{{.REMOTE_DIR_NAME}}/.env
+      - scp docker-compose.yaml {{.UPLOAD_VIA}}:{{.REMOTE_DIR_NAME}}/docker-compose.yaml
+
+  run:
+    desc: Run the docker-compose file on the remote machine, restarting if it's already running
+    cmds:
+      - ssh {{.UPLOAD_VIA}} 'cd {{.REMOTE_DIR_NAME}} && docker-compose up -d --force-recreate'
+
+  deploy:
+    desc: Deploy the docker image to the remote machine
+    cmds:
+      - task: scp
+      - task: upload
+      - task: run
+

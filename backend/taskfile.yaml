@@ -1,0 +1,23 @@
+version: 3
+
+tasks:
+  server:
+    desc: Run the project
+    cmds:
+      - cargo run -- server
+
+  lint:
+    desc: Run the linter
+    cmds:
+      - cargo clippy --all-targets --all-features -- -D warnings
+
+  fmt:
+    desc: Run the formatter
+    cmds:
+      - cargo fmt --all -- --check
+
+  lintall:
+    desc: Run all linters
+    cmds:
+      - task: fmt
+      - task: lint
