@@ -9,6 +9,8 @@ tasks:
   scp:
     desc: desc copy env and docker-compose files to remote machine
     cmds:
+      - task: generate_env
+      - defer: { task: clean_env }
       - ssh {{.UPLOAD_VIA}} 'mkdir -p {{.REMOTE_DIR_NAME}}'
       - scp .env {{.UPLOAD_VIA}}:{{.REMOTE_DIR_NAME}}/.env
       - scp docker-compose.yaml {{.UPLOAD_VIA}}:{{.REMOTE_DIR_NAME}}/docker-compose.yaml
@@ -25,3 +27,14 @@ tasks:
       - task: upload
       - task: run
 
+  generate_env:
+    desc: Generate the .env file
+    cmds:
+      - echo "IMG_NAME={{.IMG_NAME}}" > .env
+      - echo "PUBLIC_DOMAIN={{.PUBLIC_DOMAIN}}" >> .env
+      - echo "APP_NAME={{.APP_NAME}}" >> .env
+
+  clean_env:
+    desc: Clean up the .env file
+    cmds:
+      - rm .env

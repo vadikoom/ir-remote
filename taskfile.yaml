@@ -51,9 +51,16 @@ tasks:
       - task: frontend:lintall
       - task: backend:lintall
 
+  prettify:
+    desc: Prettify the app
+    cmds:
+      - task: frontend:prettify
+      - task: backend:prettify
+
   all:
     desc: Build and deploy the app
     cmds:
+      - task: prettify # temporary here
       - task: lintall
       - task: build
       - task: deploy

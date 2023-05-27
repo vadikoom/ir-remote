@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  app:
+    image: ${IMG_NAME}:latest
+    labels:
+      - "traefik.http.routers.${APP_NAME}.rule=Host(`${PUBLIC_DOMAIN}`)"
+      - "traefik.http.routers.${APP_NAME}.entrypoints=web"
+      - "traefik.http.routers.${APP_NAME}.middlewares=${APP_NAME}-redirect-to-https"
+
+      # HTTPS
+      - "traefik.http.routers.${APP_NAME}-https.rule=Host(`${PUBLIC_DOMAIN}`)"
+      - "traefik.http.routers.${APP_NAME}-https.entrypoints=websecure"
+      - "traefik.http.routers.${APP_NAME}-https.tls=true"
+      - "traefik.http.routers.${APP_NAME}-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${APP_NAME}-https.middlewares=${APP_NAME}-zip"
+
+      # Middleware redirect
+      - "traefik.http.middlewares.${APP_NAME}-redirect-to-https.redirectscheme.scheme=https"
+
+      # Middleware zip
+      - "traefik.http.middlewares.${APP_NAME}-zip.compress=true"
+
+networks:
+  default:
+    external:
+      name: traefik

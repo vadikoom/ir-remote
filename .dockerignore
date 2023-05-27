@@ -1,0 +1,9 @@
+.git
+.idea
+*.iml
+
+app/target
+app/.env
+
+frontend
+!frontend/out

@@ -21,3 +21,8 @@ tasks:
     cmds:
       - task: fmt
       - task: lint
+
+  prettify:
+    desc: Run the formatter
+    cmds:
+      - cargo fmt --all
