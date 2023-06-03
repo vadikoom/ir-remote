@@ -3,6 +3,10 @@ version: '3'
 services:
   app:
     image: ${IMG_NAME}:latest
+    environment:
+      IR_SHARED_SECRET: ${IR_SHARED_SECRET}
+    ports:
+      - "${IR_LISTEN_PORT}:12000/udp"
     labels:
       - "traefik.http.routers.${APP_NAME}.rule=Host(`${PUBLIC_DOMAIN}`)"
       - "traefik.http.routers.${APP_NAME}.entrypoints=web"
@@ -14,12 +18,16 @@ services:
       - "traefik.http.routers.${APP_NAME}-https.tls=true"
       - "traefik.http.routers.${APP_NAME}-https.tls.certresolver=letsencrypt"
       - "traefik.http.routers.${APP_NAME}-https.middlewares=${APP_NAME}-zip"
+      - "traefik.http.routers.${APP_NAME}-https.middlewares=${APP_NAME}-auth"
 
       # Middleware redirect
       - "traefik.http.middlewares.${APP_NAME}-redirect-to-https.redirectscheme.scheme=https"
 
       # Middleware zip
       - "traefik.http.middlewares.${APP_NAME}-zip.compress=true"
+
+      # Middleware basic auth
+      - "traefik.http.middlewares.${APP_NAME}-auth.basicauth.users=${BASIC_AUTH_USERNAME}:${BASIC_AUTH_PASSWORD}"
 
 networks:
   default:

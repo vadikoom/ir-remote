@@ -18,8 +18,8 @@ import (
 
 var httpPort = mustGetEnvInt("HTTP_PORT")
 var httpListenIp = mustGetEnvString("HTTP_LISTEN_IP")
-var udpListenIp = mustGetEnvString("UDP_LISTEN_IP")
-var irListenUdpPort = mustGetEnvInt("IR_LISTEN_UDP_PORT")
+var udpListenIp = mustGetEnvString("IR_LISTEN_IP")
+var irListenUdpPort = mustGetEnvInt("IR_LISTEN_PORT")
 var irSharedSecret = mustGetEnvString("IR_SHARED_SECRET")
 
 func main() {

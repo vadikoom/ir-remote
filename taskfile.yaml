@@ -26,8 +26,14 @@ tasks:
 
   'image:run':
     desc: Run the docker image
+    env:
+      IR_SHARED_SECRET: "{{.IR_SHARED_SECRET}}"
+      IR_LISTEN_PORT: "{{.IR_LISTEN_PORT}}"
     cmds:
-      - docker run --rm -p 8000:8000 {{.IMG_NAME}}:latest
+      - "echo Running {{.IMG_NAME}}:latest"
+      - "echo web: http://localhost:8000"
+      - "echo udp: port $IR_LISTEN_PORT"
+      - "docker run --rm  -p 8000:8000 -p $IR_LISTEN_PORT:12000/udp --env IR_SHARED_SECRET=$IR_SHARED_SECRET {{.IMG_NAME}}:latest"
 
   'image:console':
     desc: Console into the docker image

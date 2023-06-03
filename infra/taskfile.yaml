@@ -30,9 +30,13 @@ tasks:
   generate_env:
     desc: Generate the .env file
     cmds:
-      - echo "IMG_NAME={{.IMG_NAME}}" > .env
-      - echo "PUBLIC_DOMAIN={{.PUBLIC_DOMAIN}}" >> .env
-      - echo "APP_NAME={{.APP_NAME}}" >> .env
+      - echo 'IMG_NAME={{.IMG_NAME}}' > .env
+      - echo 'PUBLIC_DOMAIN={{.PUBLIC_DOMAIN}}' >> .env
+      - echo 'APP_NAME={{.APP_NAME}}' >> .env
+      - echo 'IR_LISTEN_PORT={{.IR_LISTEN_PORT}}' >> .env
+      - echo 'IR_SHARED_SECRET={{.IR_SHARED_SECRET}}' >> .env
+      - echo 'BASIC_AUTH_USERNAME={{.BASIC_AUTH_USERNAME}}' >> .env
+      - echo 'BASIC_AUTH_PASSWORD={{.BASIC_AUTH_PASSWORD | replace "." "$" }}' >> .env
 
   clean_env:
     desc: Clean up the .env file
