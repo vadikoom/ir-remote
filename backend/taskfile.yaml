@@ -1,8 +1,14 @@
 version: 3
 
 tasks:
-  server:
+  dev:
     desc: Run the project
+    env:
+      HTTP_PORT: 8080
+      HTTP_LISTEN_IP: 127.0.0.1
+      UDP_LISTEN_IP: 127.0.0.1
+      IR_LISTEN_UDP_PORT: 6466
+      IR_SHARED_SECRET: z3456yhgdfewrtyhnbvvcfrwetryhgb
     cmds:
       - go run cmd/server/server.go
 
