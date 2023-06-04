@@ -2,21 +2,40 @@ version: '3'
 
 vars:
   IMAGE: 'ir-remote-image'
+
   TESTER_FQBN: 'arduino:avr:mega'
-  CONTROLLER_FQBN: 'arduino:avr:mega'
+  TESTER_UPLOAD_TO_PORT: '/dev/tty.usbmodem14101'
+
+  CONTROLLER_FQBN: esp8266:esp8266:nodemcuv2:xtal=80
+  CONTROLLER_UPLOAD_TO_PORT: '/dev/tty.wchusbserial1420'
 
 tasks:
   setup:
     docker build . -t {{.IMAGE}}
 
   console:
-    docker run --rm -it -v $(pwd):/app {{.IMAGE}} /bin/bash
+    docker run --rm  --privileged -v $(pwd):/app -it -v $(pwd):/app {{.IMAGE}} /bin/bash
+
+  build:tester: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c 
+        "cd /app/tester && arduino-cli compile --fqbn {{.TESTER_FQBN}} --output-dir /app/bin/tester ."
+
+  build:controller: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c 
+        "cd /app/controller && arduino-cli compile 
+          --fqbn {{.CONTROLLER_FQBN}} 
+          --build-property compiler.cpp.extra_flags='-DWIFI_SSID=\"{{.WIFI_SSID}}\" -DWIFI_PASS=\"{{.WIFI_PASS}}\"'
+          --output-dir /app/bin/controller .
+        "
+
+
+  ## Does not work in docker with MacOS host, so have to have arduino-cli installed on host anyway =( 
+  upload:tester: arduino-cli upload -p {{.TESTER_UPLOAD_TO_PORT}} --fqbn {{.TESTER_FQBN}} --input-dir ./bin/tester
+  upload:controller: arduino-cli upload -p {{.CONTROLLER_UPLOAD_TO_PORT}} --fqbn {{.CONTROLLER_FQBN}} --input-dir ./bin/controller
 
   build:
     cmds:
-    - docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c "
-        cd /app/tester && arduino-cli compile --fqbn {{.TESTER_FQBN}} --output-dir /app/bin .
-      "
-    - docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c "
-        cd /app/controller && arduino-cli compile --fqbn {{.CONTROLLER_FQBN}} --output-dir /app/bin .
-      "
+    - task: build:tester
+    - task: build:controller
+
+  clean:
+    - rm -rf ./bin
+

@@ -3,6 +3,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     make \
+    python3 \
     vim
 
 RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
@@ -11,3 +12,4 @@ RUN arduino-cli core update-index
 RUN arduino-cli core install arduino:avr
 RUN arduino-cli core install esp8266:esp8266
 
+RUN arduino-cli lib install IRremote

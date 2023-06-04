@@ -7,6 +7,10 @@ includes:
     taskfile: ./backend/taskfile.yaml
     dir: ./backend
 
+  firmware:
+    taskfile: ./firmware/taskfile.yaml
+    dir: ./firmware
+
   frontend:
     taskfile: ./frontend/taskfile.yaml
     dir: ./frontend
