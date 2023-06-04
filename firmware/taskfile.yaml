@@ -1,0 +1,22 @@
+version: '3'
+
+vars:
+  IMAGE: 'ir-remote-image'
+  TESTER_FQBN: 'arduino:avr:mega'
+  CONTROLLER_FQBN: 'arduino:avr:mega'
+
+tasks:
+  setup:
+    docker build . -t {{.IMAGE}}
+
+  console:
+    docker run --rm -it -v $(pwd):/app {{.IMAGE}} /bin/bash
+
+  build:
+    cmds:
+    - docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c "
+        cd /app/tester && arduino-cli compile --fqbn {{.TESTER_FQBN}} --output-dir /app/bin .
+      "
+    - docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c "
+        cd /app/controller && arduino-cli compile --fqbn {{.CONTROLLER_FQBN}} --output-dir /app/bin .
+      "
