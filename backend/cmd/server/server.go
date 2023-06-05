@@ -23,9 +23,10 @@ var irListenUdpPort = mustGetEnvInt("IR_LISTEN_PORT")
 var irSharedSecret = mustGetEnvString("IR_SHARED_SECRET")
 
 func main() {
-	aesEncoder := encoder.NewAesEncoder(irSharedSecret)
+	// aesEncoder := encoder.NewAesEncoder(irSharedSecret)
+	dummyEncoder := encoder.NewDummyEncoder()
 	udp := transport.NewUdpTransport()
-	session := irremote.NewSession(udp, aesEncoder)
+	session := irremote.NewSession(udp, dummyEncoder)
 	webServer := webserver.NewWebServer(httpPort, httpListenIp, session)
 
 	ctx, teardownApp := context.WithCancel(context.Background())

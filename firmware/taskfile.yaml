@@ -22,10 +22,14 @@ tasks:
   build:controller: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c 
         "cd /app/controller && arduino-cli compile 
           --fqbn {{.CONTROLLER_FQBN}} 
-          --build-property compiler.cpp.extra_flags='-DWIFI_SSID=\"{{.WIFI_SSID}}\" -DWIFI_PASS=\"{{.WIFI_PASS}}\"'
+          --build-property compiler.cpp.extra_flags='
+            -DFIRMWARE_WIFI_SSID=\"{{.FIRMWARE_WIFI_SSID}}\"
+             -DFIRMWARE_WIFI_PASS=\"{{.FIRMWARE_WIFI_PASS}}\"  
+             -DFIRMWARE_REMOTE_HOST=\"{{.FIRMWARE_REMOTE_HOST}}\"
+             -DFIRMWARE_SHARED_SECRET=\"{{.FIRMWARE_SHARED_SECRET}}\"
+             '
           --output-dir /app/bin/controller .
         "
-
 
   ## Does not work in docker with MacOS host, so have to have arduino-cli installed on host anyway =( 
   upload:tester: arduino-cli upload -p {{.TESTER_UPLOAD_TO_PORT}} --fqbn {{.TESTER_FQBN}} --input-dir ./bin/tester

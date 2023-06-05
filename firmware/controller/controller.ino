@@ -1,71 +1,70 @@
 #include "Arduino.h"
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
+#include "logger.h"
+#include "application.h"
+#include "network.h"
+#include "crypto.h"
 
-
-#ifndef WIFI_SSID
-    #error "WIFI_SSID macro is not defined!"
+#ifndef FIRMWARE_WIFI_SSID
+    #error "FIRMWARE_WIFI_SSID macro is not defined!"
 #endif
 
-#ifndef WIFI_PASS
-    #error "WIFI_PASS macro is not defined!"
+#ifndef FIRMWARE_WIFI_PASS
+    #error "FIRMWARE_WIFI_PASS macro is not defined!"
 #endif
 
-#define UDP_PORT 4944
+#ifndef FIRMWARE_REMOTE_HOST
+    #error "FIRMWARE_REMOTE_HOST macro is not defined!"
+#endif
 
-// UDP
-WiFiUDP UDP;
+#ifndef FIRMWARE_SHARED_SECRET
+    #error "FIRMWARE_SHARED_SECRET macro is not defined!"
+#endif
 
-char buffer[] = "hello world";
-char buffer2[200];
+#define LOCAL_UDP_PORT 4944
+#define REMOTE_UDP_PORT 4944
+
+#define IDLE_PING_INTERVAL (5 * 1000) // 5 seconds
+
+Network network(FIRMWARE_WIFI_SSID, FIRMWARE_WIFI_PASS, LOCAL_UDP_PORT, REMOTE_UDP_PORT, FIRMWARE_REMOTE_HOST);
+Application application;
+Crypto crypto(FIRMWARE_SHARED_SECRET);
+
+char iobuffer[1024];
+DynamicJsonDocument json(2048);
+uint64 nextTimeSendStatus = 0;
+
 
 void setup() {
-    Serial.begin(115200);
+    delay(10000);
 
-    delay(5000);
-
-    // Begin WiFi
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    Logger.println("Starting up...");
+    Logger.println("WIFI_SSID: " + String(FIRMWARE_WIFI_SSID));
+    Logger.println("WIFI_PASS: " + String(FIRMWARE_WIFI_PASS));
+    Logger.println("LOCAL_UDP_PORT: " + String(LOCAL_UDP_PORT));
+    Logger.println("REMOTE_UDP_PORT: " + String(REMOTE_UDP_PORT));
+    Logger.println("remoteHost: " + String(FIRMWARE_REMOTE_HOST));
     
-    // Connecting to WiFi...
-    Serial.print("Connecting to ");
-    Serial.print(WIFI_SSID);
-    // Loop continuously while WiFi is not connected
-    
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(100);
-        Serial.print(".");
-    }
-    
-    // Connected to WiFi
-    Serial.println();
-    Serial.print("Connected! IP address: ");
-    Serial.println(WiFi.localIP());
-
-    // Begin listening to UDP port
-    UDP.begin(UDP_PORT);
-    Serial.print("Listening on UDP port ");
-    Serial.println(UDP_PORT);
-    
+    network.Connect();
 }
 
-void loop() {
-    delay(3000);
-    UDP.beginPacket("255.255.255.255", UDP_PORT);
-    UDP.write(buffer, sizeof(buffer));
-    UDP.endPacket();
-
-    int packetSize = UDP.parsePacket(); 
-    if (packetSize) {
-        Serial.print("Received packet! Size: ");
-        Serial.println(packetSize); 
-        int len = UDP.read(buffer2, 255);
-        if (len > 0) {
-            buffer2[len] = '\0';
+void loop() {   
+    uint64 now = millis();
+    size_t len = network.Receive(iobuffer, sizeof(iobuffer));
+    
+    if (len > 0) {
+        bool successfullDecrypt = crypto.decrypt(iobuffer, len, json);
+        if (successfullDecrypt) {
+            application.consumeCommand(json);
+            nextTimeSendStatus = now;
         }
-        Serial.print("Packet received: ");
-        Serial.println(buffer2);
     }
 
-    Serial.println("Sent packet!");
+    if (nextTimeSendStatus <= now) {
+        nextTimeSendStatus = now + IDLE_PING_INTERVAL;
+        application.reportStatus(json);
+        size_t len = crypto.encrypt(json, iobuffer, sizeof(iobuffer));
+        network.Send(iobuffer, len);
+    }   
 }

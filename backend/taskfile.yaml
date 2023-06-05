@@ -6,8 +6,8 @@ tasks:
     env:
       HTTP_PORT: 8080
       HTTP_LISTEN_IP: 127.0.0.1
-      IR_LISTEN_IP: 127.0.0.1
-      IR_LISTEN_PORT: 6466
+      IR_LISTEN_IP: 0.0.0.0
+      IR_LISTEN_PORT: 4944
       IR_SHARED_SECRET: z3456yhgdfewrtyhnbvvcfrwetryhgb
     cmds:
       - go run cmd/server/server.go

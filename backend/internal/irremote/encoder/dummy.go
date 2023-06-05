@@ -14,9 +14,16 @@ func (d *dummyEncoder) Encrypt(message any) []byte {
 	if err != nil {
 		panic(err)
 	}
+	println("Encrypting ", string(out))
 	return out
 }
 
 func (d *dummyEncoder) Decrypt(data []byte, into any) error {
-	return json.Unmarshal(data, into)
+	err := json.Unmarshal(data, into)
+	if err != nil {
+	    return err
+    }
+
+    println("Decrypted ", string(data))
+    return nil
 }
