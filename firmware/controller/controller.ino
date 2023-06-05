@@ -31,8 +31,8 @@ Network network(FIRMWARE_WIFI_SSID, FIRMWARE_WIFI_PASS, LOCAL_UDP_PORT, REMOTE_U
 Application application;
 Crypto crypto(FIRMWARE_SHARED_SECRET);
 
-char iobuffer[1024];
-DynamicJsonDocument json(2048);
+char iobuffer[2048];
+DynamicJsonDocument json(8 * 1024);
 uint64 nextTimeSendStatus = 0;
 
 
