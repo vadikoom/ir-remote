@@ -25,7 +25,7 @@
 #define LOCAL_UDP_PORT 4944
 #define REMOTE_UDP_PORT 4944
 
-#define LED_PIN 2 
+#define LED_PIN 2
 #define IDLE_PING_INTERVAL (5 * 1000) // 5 seconds
 
 Network network(FIRMWARE_WIFI_SSID, FIRMWARE_WIFI_PASS, LOCAL_UDP_PORT, REMOTE_UDP_PORT, FIRMWARE_REMOTE_HOST);
@@ -38,9 +38,6 @@ uint64 nextTimeSendStatus = 0;
 
 
 void setup() {
-    pinMode(LED_PIN, OUTPUT);
-    delay(10000);
-
     Logger.println("Starting up...");
     Logger.println("WIFI_SSID: " + String(FIRMWARE_WIFI_SSID));
     Logger.println("WIFI_PASS: " + String(FIRMWARE_WIFI_PASS));

@@ -1,4 +1,4 @@
-#include <IRremote.h>
+#include <IRsend.h>
 #include <ArduinoJson.h>
 #include "logger.h"
 
@@ -7,8 +7,8 @@
 
 class Application {
     public:
-        Application(int ledPin) {
-            irsend.begin(ledPin);
+        Application(int pinNumber) : irsend(pinNumber, true) {
+            irsend.begin();
         }
 
         void consumeCommand(DynamicJsonDocument &json) {

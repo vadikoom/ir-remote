@@ -12,5 +12,5 @@ RUN arduino-cli core update-index
 RUN arduino-cli core install arduino:avr
 RUN arduino-cli core install esp8266:esp8266
 
-RUN arduino-cli lib install IRremote
+RUN arduino-cli lib install IRremoteESP8266
 RUN arduino-cli lib install ArduinoJson
