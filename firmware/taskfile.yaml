@@ -7,7 +7,8 @@ vars:
   TESTER_UPLOAD_TO_PORT: '/dev/tty.usbmodem14101'
 
   CONTROLLER_FQBN: esp8266:esp8266:nodemcuv2:xtal=80
-  CONTROLLER_UPLOAD_TO_PORT: '/dev/tty.wchusbserial1420'
+ # CONTROLLER_UPLOAD_TO_PORT: '/dev/tty.wchusbserial1420'
+  CONTROLLER_UPLOAD_TO_PORT: /dev/tty.SLAB_USBtoUART
 
 tasks:
   setup:

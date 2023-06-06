@@ -1,3 +1,4 @@
+#include <IRremote.h>
 #include <ArduinoJson.h>
 #include "logger.h"
 
@@ -6,7 +7,8 @@
 
 class Application {
     public:
-        Application() {
+        Application(int ledPin) {
+            irsend.begin(ledPin);
         }
 
         void consumeCommand(DynamicJsonDocument &json) {
@@ -28,34 +30,34 @@ class Application {
         }
 
     private:
-        size_t jsonArrayIntoCommandBuffer(JsonArray array, int *buffer, size_t bufferLen) {
+        size_t jsonArrayIntoCommandBuffer(JsonArray array, uint16_t *buffer, size_t bufferLen) {
             int i = 0;
             for (JsonVariant v : array) {
                 if (i >= bufferLen) {
                     Logger.println("Command buffer overflow!");
                     return 0;
                 }
-                buffer[i] = v.as<int>();
+                buffer[i] = v.as<uint16_t>();
                 i++;
             }
 
             return i;
         }
 
-        void executeCommand(int *commandBuffer, size_t commandLen) {
+        void executeCommand(uint16_t *commandBuffer, size_t commandLen) {
             Logger.print("Executing command: ");
             for (int i = 0; i < commandLen; i++) {
                 Logger.print(commandBuffer[i]);
                 Logger.print(" ");
             }
             Logger.println();
-
-            
-
+            irsend.sendRaw(commandBuffer, commandLen, 38);  
         }
 
     private:
-        int commandBuffer[300];
+        IRsend irsend;
+
+        uint16_t commandBuffer[300];
         int lastTimeStatusSent = 0;
         int lastCommandId = 0;
 };
