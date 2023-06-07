@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 export const StatusBage = () => {
   const [isOnline, setIsOnline] = useState(false);
   useEffect(() => {
-    const h = setInterval(async () => {
-      try {
-        let { online } = await api.getStatus();
-        setIsOnline(online);
-      } catch (error) {
-        setIsOnline(false);
-      }
-    }, 3000);
+    async function getStatus() {
+        try {
+            let { online } = await api.getStatus();
+            setIsOnline(online);
+        } catch (error) {
+            setIsOnline(false);
+        }
+    }
+    getStatus();
+    const h = setInterval(getStatus, 3000);
     return () => {
       clearInterval(h);
     };
