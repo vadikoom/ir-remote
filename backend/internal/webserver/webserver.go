@@ -15,19 +15,23 @@ type WebServer interface {
 	ListenAndServe(ctx context.Context) error
 }
 
-func NewWebServer(httpPort int, httpListenIp string, remote *irremote.Session) WebServer {
+func NewWebServer(httpPort int, httpListenIp string, remote *irremote.Session, staticFilesDir string, allowAnyCors bool) WebServer {
 	return &webServer{
-		httpPort:     httpPort,
-		httpListenIp: httpListenIp,
-		remote:       remote,
+		httpPort:       httpPort,
+		httpListenIp:   httpListenIp,
+		remote:         remote,
+		staticFilesDir: staticFilesDir,
+		allowAnyCors:   allowAnyCors,
 	}
 }
 
 type webServer struct {
-	httpPort     int
-	httpListenIp string
-	remote       *irremote.Session
-	svr          *http.Server
+	httpPort       int
+	httpListenIp   string
+	remote         *irremote.Session
+	svr            *http.Server
+	staticFilesDir string
+	allowAnyCors   bool
 }
 
 func (s *webServer) ListenAndServe(ctx context.Context) error {
@@ -35,8 +39,17 @@ func (s *webServer) ListenAndServe(ctx context.Context) error {
 	s.svr = &http.Server{Addr: address}
 
 	mux := http.NewServeMux()
-	mux.Handle("/command", logRequestHandler(s.ServeCommand()))
-	mux.Handle("/status", logRequestHandler(s.ServeStatus()))
+	var corsHandler func(http.Handler) http.Handler
+	if s.allowAnyCors {
+		corsHandler = addCorsHeaders
+	} else {
+		corsHandler = noopHandler
+	}
+
+	mux.Handle("/api/command", logRequestHandler(corsHandler(s.ServeCommand())))
+	mux.Handle("/api/status", logRequestHandler(corsHandler(s.ServeStatus())))
+	mux.Handle("/", corsHandler(http.FileServer(http.Dir(s.staticFilesDir))))
+
 	s.svr.Handler = mux
 
 	go func() {
@@ -98,6 +111,34 @@ func (s *webServer) ServeStatus() http.HandlerFunc {
 	}
 }
 
+func addCorsHeaders(h http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			// set CORS headers
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+		// call the original http.Handler we're wrapping
+		h.ServeHTTP(w, r)
+	}
+
+	// http.HandlerFunc wraps a function so that it
+	// implements http.Handler interface
+	return http.HandlerFunc(fn)
+}
+
+func noopHandler(h http.Handler) http.Handler {
+	return h
+}
+
 func logRequestHandler(h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		// call the original http.Handler we're wrapping
@@ -116,6 +157,7 @@ func logRequestHandler(h http.Handler) http.Handler {
 }
 
 func respond(status int, obj any, writer http.ResponseWriter) {
+	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(status)
 	marshal, err := json.Marshal(obj)
 	if err != nil {

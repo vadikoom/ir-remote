@@ -1,6 +1,13 @@
 version: 3
 
 tasks:
+  dev:
+    desc: Run the frontend in development mode
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:8080/api
+    cmds:
+      - npm run dev
+
   prettify:
     desc: Prettify all files
     cmds:
@@ -14,6 +21,8 @@ tasks:
 
   build:
     desc: Build the frontend
+    env:
+      NEXT_PUBLIC_API_URL: /api
     cmds:
       - npm install
       - npm run build

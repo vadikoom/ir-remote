@@ -21,9 +21,9 @@ func (d *dummyEncoder) Encrypt(message any) []byte {
 func (d *dummyEncoder) Decrypt(data []byte, into any) error {
 	err := json.Unmarshal(data, into)
 	if err != nil {
-	    return err
-    }
+		return err
+	}
 
-    println("Decrypted ", string(data))
-    return nil
+	println("Decrypted ", string(data))
+	return nil
 }

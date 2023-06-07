@@ -21,13 +21,15 @@ var httpListenIp = mustGetEnvString("HTTP_LISTEN_IP")
 var udpListenIp = mustGetEnvString("IR_LISTEN_IP")
 var irListenUdpPort = mustGetEnvInt("IR_LISTEN_PORT")
 var irSharedSecret = mustGetEnvString("IR_SHARED_SECRET")
+var staticFilesDir = mustGetEnvString("STATIC_FILES_DIR")
+var allowAnyCors = mustGetEnvBool("ALLOW_ANY_CORS")
 
 func main() {
 	// aesEncoder := encoder.NewAesEncoder(irSharedSecret)
 	dummyEncoder := encoder.NewDummyEncoder()
 	udp := transport.NewUdpTransport()
 	session := irremote.NewSession(udp, dummyEncoder)
-	webServer := webserver.NewWebServer(httpPort, httpListenIp, session)
+	webServer := webserver.NewWebServer(httpPort, httpListenIp, session, staticFilesDir, allowAnyCors)
 
 	ctx, teardownApp := context.WithCancel(context.Background())
 
@@ -81,6 +83,16 @@ func mustGetEnvString(key string) string {
 		panic("Missing required environment variable: " + key)
 	}
 	return val
+}
+
+func mustGetEnvBool(key string) bool {
+	val := os.Getenv(key)
+	if val == "" {
+		return false
+	}
+	b, err := strconv.ParseBool(val)
+	assertNoError(err)
+	return b
 }
 
 func assertNoError(err error) {
