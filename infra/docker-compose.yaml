@@ -12,13 +12,20 @@ services:
       - "traefik.http.routers.${APP_NAME}.entrypoints=web"
       - "traefik.http.routers.${APP_NAME}.middlewares=${APP_NAME}-redirect-to-https"
 
-      # HTTPS
+      # HTTPS - static files
       - "traefik.http.routers.${APP_NAME}-https.rule=Host(`${PUBLIC_DOMAIN}`)"
       - "traefik.http.routers.${APP_NAME}-https.entrypoints=websecure"
       - "traefik.http.routers.${APP_NAME}-https.tls=true"
       - "traefik.http.routers.${APP_NAME}-https.tls.certresolver=letsencrypt"
       - "traefik.http.routers.${APP_NAME}-https.middlewares=${APP_NAME}-zip"
-      - "traefik.http.routers.${APP_NAME}-https.middlewares=${APP_NAME}-auth"
+
+      # HTTPS - static api
+      - "traefik.http.routers.${APP_NAME}-api-https.rule=Host(`${PUBLIC_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.${APP_NAME}-api-https.entrypoints=websecure"
+      - "traefik.http.routers.${APP_NAME}-api-https.tls=true"
+      - "traefik.http.routers.${APP_NAME}-api-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${APP_NAME}-api-https.middlewares=${APP_NAME}-zip"
+      - "traefik.http.routers.${APP_NAME}-api-https.middlewares=${APP_NAME}-auth"
 
       # Middleware redirect
       - "traefik.http.middlewares.${APP_NAME}-redirect-to-https.redirectscheme.scheme=https"
