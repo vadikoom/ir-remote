@@ -37,6 +37,8 @@ tasks:
       - echo 'IR_SHARED_SECRET={{.IR_SHARED_SECRET}}' >> .env
       - echo 'BASIC_AUTH_USERNAME={{.BASIC_AUTH_USERNAME}}' >> .env
       - echo 'BASIC_AUTH_PASSWORD={{.BASIC_AUTH_PASSWORD | replace "." "$" }}' >> .env
+      - echo 'BOT_API={{.BOT_API}}' >> .env
+      - echo 'BOT_AUTHORIZED_USERS={{.BOT_AUTHORIZED_USERS}}' >> .env
 
   clean_env:
     desc: Clean up the .env file

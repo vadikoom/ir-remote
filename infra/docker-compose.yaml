@@ -5,6 +5,8 @@ services:
     image: ${IMG_NAME}:latest
     environment:
       IR_SHARED_SECRET: ${IR_SHARED_SECRET}
+      BOT_API: ${BOT_API}
+      BOT_AUTHORIZED_USERS: ${BOT_AUTHORIZED_USERS}
     ports:
       - "${IR_LISTEN_PORT}:12000/udp"
     labels:

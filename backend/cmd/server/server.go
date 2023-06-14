@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	bot2 "github.com/Light-Keeper/ir-remote/internal/bot"
 	"github.com/Light-Keeper/ir-remote/internal/irremote"
 	"github.com/Light-Keeper/ir-remote/internal/irremote/encoder"
 	"github.com/Light-Keeper/ir-remote/internal/irremote/transport"
@@ -24,17 +25,21 @@ var irSharedSecret = mustGetEnvString("IR_SHARED_SECRET")
 var staticFilesDir = mustGetEnvString("STATIC_FILES_DIR")
 var allowAnyCors = mustGetEnvBool("ALLOW_ANY_CORS")
 
+var botApiKey = mustGetEnvString("BOT_API")
+var botAuthorizedUsers = mustGetEnvString("BOT_AUTHORIZED_USERS")
+
 func main() {
 	// aesEncoder := encoder.NewAesEncoder(irSharedSecret)
 	dummyEncoder := encoder.NewDummyEncoder()
 	udp := transport.NewUdpTransport()
 	session := irremote.NewSession(udp, dummyEncoder)
 	webServer := webserver.NewWebServer(httpPort, httpListenIp, session, staticFilesDir, allowAnyCors)
+	bot := bot2.NewBot(botApiKey, botAuthorizedUsers, session)
 
 	ctx, teardownApp := context.WithCancel(context.Background())
 
 	wg := &sync.WaitGroup{}
-	wg.Add(3)
+	wg.Add(4)
 
 	go func() {
 		defer wg.Done()
@@ -55,6 +60,14 @@ func main() {
 	go func() {
 		defer wg.Done()
 		err := webServer.ListenAndServe(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		err := bot.Run(ctx)
 		if err != nil {
 			panic(err)
 		}

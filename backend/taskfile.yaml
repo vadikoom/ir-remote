@@ -11,6 +11,8 @@ tasks:
       IR_SHARED_SECRET: z3456yhgdfewrtyhnbvvcfrwetryhgb
       STATIC_FILES_DIR: ../frontend/out
       ALLOW_ANY_CORS: true
+      BOT_API: "{{.BOT_API}}"
+      BOT_AUTHORIZED_USERS: "{{.BOT_AUTHORIZED_USERS}}"
     cmds:
       - go run cmd/server/server.go
 
