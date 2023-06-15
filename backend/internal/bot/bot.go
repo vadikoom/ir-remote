@@ -81,13 +81,13 @@ var buttons = [][]struct {
 }{
 	{
 		{"🔴выкл", handleButtonOff},
-		{"🥶+23", handleButtonCold22},
-		{"💧+23", handleUnknown},
+		{"🥶+24", sendCommandHandler(commandCold24)},
+		{"💧+24", sendCommandHandler(commandWater24)},
 	},
 	{
 		{"? статус", handleButtonStatus},
-		{"🥶+20", handleUnknown},
-		{"💧+20", handleUnknown},
+		{"🥶+20", sendCommandHandler(commandCold20)},
+		{"💧+20", sendCommandHandler(commandWater20)},
 	},
 }
 
@@ -122,20 +122,18 @@ func handleButtonOff(b *Bot, ctx context.Context, chatId int64) {
 	b.sendCommandAndReplay(ctx, commandOff, chatId)
 }
 
-func handleButtonCold22(b *Bot, ctx context.Context, chatId int64) {
-	b.sendCommandAndReplay(ctx, commandCold22, chatId)
-}
-
-func handleButtonWater22(b *Bot, ctx context.Context, chatId int64) {
-	b.sendCommandAndReplay(ctx, commandWater22, chatId)
-}
-
 func handleButtonStatus(b *Bot, ctx context.Context, chatId int64) {
 	b.respond(ctx, chatId, "")
 }
 
 func handleUnknown(b *Bot, ctx context.Context, chatId int64) {
 	b.respond(ctx, chatId, "Неизвестная команда")
+}
+
+func sendCommandHandler(command []int) func(b *Bot, ctx context.Context, chatId int64) {
+	return func(b *Bot, ctx context.Context, chatId int64) {
+		b.sendCommandAndReplay(ctx, command, chatId)
+	}
 }
 
 func (b *Bot) sendCommandAndReplay(ctx context.Context, command []int, chatId int64) {
