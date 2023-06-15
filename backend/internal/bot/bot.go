@@ -81,8 +81,8 @@ var buttons = [][]struct {
 }{
 	{
 		{"🔴выкл", handleButtonOff},
-		{"🥶+24", handleButtonCold22},
-		{"💧+24", handleUnknown},
+		{"🥶+23", handleButtonCold22},
+		{"💧+23", handleUnknown},
 	},
 	{
 		{"? статус", handleButtonStatus},
