@@ -3,42 +3,10 @@ version: '3'
 services:
   app:
     image: ${IMG_NAME}:latest
+    restart: always
     environment:
       IR_SHARED_SECRET: ${IR_SHARED_SECRET}
       BOT_API: ${BOT_API}
       BOT_AUTHORIZED_USERS: ${BOT_AUTHORIZED_USERS}
     ports:
       - "${IR_LISTEN_PORT}:12000/udp"
-    labels:
-      - "traefik.http.routers.${APP_NAME}.rule=Host(`${PUBLIC_DOMAIN}`)"
-      - "traefik.http.routers.${APP_NAME}.entrypoints=web"
-      - "traefik.http.routers.${APP_NAME}.middlewares=${APP_NAME}-redirect-to-https"
-
-      # HTTPS - static files
-      - "traefik.http.routers.${APP_NAME}-https.rule=Host(`${PUBLIC_DOMAIN}`)"
-      - "traefik.http.routers.${APP_NAME}-https.entrypoints=websecure"
-      - "traefik.http.routers.${APP_NAME}-https.tls=true"
-      - "traefik.http.routers.${APP_NAME}-https.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.${APP_NAME}-https.middlewares=${APP_NAME}-zip"
-
-      # HTTPS - static api
-      - "traefik.http.routers.${APP_NAME}-api-https.rule=Host(`${PUBLIC_DOMAIN}`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.${APP_NAME}-api-https.entrypoints=websecure"
-      - "traefik.http.routers.${APP_NAME}-api-https.tls=true"
-      - "traefik.http.routers.${APP_NAME}-api-https.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.${APP_NAME}-api-https.middlewares=${APP_NAME}-zip"
-      - "traefik.http.routers.${APP_NAME}-api-https.middlewares=${APP_NAME}-auth"
-
-      # Middleware redirect
-      - "traefik.http.middlewares.${APP_NAME}-redirect-to-https.redirectscheme.scheme=https"
-
-      # Middleware zip
-      - "traefik.http.middlewares.${APP_NAME}-zip.compress=true"
-
-      # Middleware basic auth
-      - "traefik.http.middlewares.${APP_NAME}-auth.basicauth.users=${BASIC_AUTH_USERNAME}:${BASIC_AUTH_PASSWORD}"
-
-networks:
-  default:
-    external:
-      name: traefik

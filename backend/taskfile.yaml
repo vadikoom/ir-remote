@@ -4,13 +4,9 @@ tasks:
   dev:
     desc: Run the project
     env:
-      HTTP_PORT: 8080
-      HTTP_LISTEN_IP: 127.0.0.1
       IR_LISTEN_IP: 0.0.0.0
       IR_LISTEN_PORT: 4944
       IR_SHARED_SECRET: z3456yhgdfewrtyhnbvvcfrwetryhgb
-      STATIC_FILES_DIR: ../frontend/out
-      ALLOW_ANY_CORS: true
       BOT_API: "{{.BOT_API}}"
       BOT_AUTHORIZED_USERS: "{{.BOT_AUTHORIZED_USERS}}"
     cmds:

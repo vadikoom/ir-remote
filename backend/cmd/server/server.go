@@ -6,7 +6,6 @@ import (
 	"github.com/Light-Keeper/ir-remote/internal/irremote"
 	"github.com/Light-Keeper/ir-remote/internal/irremote/encoder"
 	"github.com/Light-Keeper/ir-remote/internal/irremote/transport"
-	"github.com/Light-Keeper/ir-remote/internal/webserver"
 	"log"
 	"net"
 	"os"
@@ -17,14 +16,9 @@ import (
 	"time"
 )
 
-var httpPort = mustGetEnvInt("HTTP_PORT")
-var httpListenIp = mustGetEnvString("HTTP_LISTEN_IP")
 var udpListenIp = mustGetEnvString("IR_LISTEN_IP")
 var irListenUdpPort = mustGetEnvInt("IR_LISTEN_PORT")
 var irSharedSecret = mustGetEnvString("IR_SHARED_SECRET")
-var staticFilesDir = mustGetEnvString("STATIC_FILES_DIR")
-var allowAnyCors = mustGetEnvBool("ALLOW_ANY_CORS")
-
 var botApiKey = mustGetEnvString("BOT_API")
 var botAuthorizedUsers = mustGetEnvString("BOT_AUTHORIZED_USERS")
 
@@ -33,13 +27,12 @@ func main() {
 	dummyEncoder := encoder.NewDummyEncoder()
 	udp := transport.NewUdpTransport()
 	session := irremote.NewSession(udp, dummyEncoder)
-	webServer := webserver.NewWebServer(httpPort, httpListenIp, session, staticFilesDir, allowAnyCors)
 	bot := bot2.NewBot(botApiKey, botAuthorizedUsers, session)
 
 	ctx, teardownApp := context.WithCancel(context.Background())
 
 	wg := &sync.WaitGroup{}
-	wg.Add(4)
+	wg.Add(3)
 
 	go func() {
 		defer wg.Done()
@@ -55,14 +48,6 @@ func main() {
 	go func() {
 		defer wg.Done()
 		session.RunSession(ctx)
-	}()
-
-	go func() {
-		defer wg.Done()
-		err := webServer.ListenAndServe(ctx)
-		if err != nil {
-			panic(err)
-		}
 	}()
 
 	go func() {
@@ -96,16 +81,6 @@ func mustGetEnvString(key string) string {
 		panic("Missing required environment variable: " + key)
 	}
 	return val
-}
-
-func mustGetEnvBool(key string) bool {
-	val := os.Getenv(key)
-	if val == "" {
-		return false
-	}
-	b, err := strconv.ParseBool(val)
-	assertNoError(err)
-	return b
 }
 
 func assertNoError(err error) {
