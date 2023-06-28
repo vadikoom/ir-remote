@@ -1,4 +1,6 @@
-#define DEBUG_CONSOLE
+#ifdef UNIT_TEST
+   #define DEBUG_CONSOLE
+#endif
 
 #ifdef DEBUG_SERIAL
    #define debug(...)    Serial.print(__VA_ARGS__)
@@ -10,5 +12,5 @@
 #endif
 
 #ifndef debug
-   #define debug(...)    //now defines a blank line
+   #define debug(...)    do {} while (0) 
 #endif

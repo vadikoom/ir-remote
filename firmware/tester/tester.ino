@@ -1,6 +1,5 @@
 #define RAW_BUFFER_LENGTH 750
 #define RECORD_GAP_MICROS 16000
-#define DEBUG
 
 //------------------------------------------------------------------------------
 // Include the IRremote library header
@@ -21,6 +20,9 @@ void  setup ( )
 {
   Serial.begin(9600);   // Status message will be sent to PC at 9600 baud
   irrecv.enableIRIn();  // Start the receiver
+
+  Serial.print("Ready to receive IR signals at pin ");
+  Serial.println(recvPin);
 }
 
 //+=============================================================================
@@ -88,12 +90,17 @@ void  dumpInfo (decode_results *results)
   Serial.println(" bits)");
 }
 
-//+=============================================================================
-// Dump out the decode_results structure.
-//
-void  dumpRaw (irparams_struct *results)
-{
+void dumpDecoded(irparams_struct *results) {
+    for (int i = 0;  i < results->rawlen;  i++) {
+        results->rawbuf[i] = results->rawbuf[i] * USECPERTICK;
+    }
+
     Result<LessarCommand> result = LessarCommand::decodeFromRaw(results->rawbuf, results->rawlen);
+
+    for (int i = 0;  i < results->rawlen;  i++) {
+        results->rawbuf[i] = results->rawbuf[i] / USECPERTICK;
+    }
+
     if (!result.ok()) {
         Serial.print("Decoding error ");
         Serial.println(result.error());
@@ -103,7 +110,12 @@ void  dumpRaw (irparams_struct *results)
         cmd.printBits(buffer);
         Serial.println(buffer);
     }
-
+}
+//+=============================================================================
+// Dump out the decode_results structure.
+//
+void  dumpRaw (irparams_struct *results)
+{
   // Print Raw data
   Serial.print("Timing[");
   Serial.print(results->rawlen-1, DEC);
@@ -208,6 +220,9 @@ void  dumpInfo2(IRData *results)
   Serial.print("ssiiizeee   : ");
   Serial.println(sizeof(results->rawDataPtr->rawbuf)/sizeof(results->rawDataPtr->rawbuf[0]), DEC);
 
+  Serial.print("rawData[0]   : ");
+  Serial.println(results->rawDataPtr->rawbuf[0], DEC);
+
   dumpRaw(results->rawDataPtr);
   dumpCode(results->rawDataPtr);
 }
@@ -219,7 +234,8 @@ void  loop ( )
 {
 
   if (irrecv.decode()) {
-    dumpInfo2(&IrReceiver.decodedIRData);
+    // dumpInfo2(&IrReceiver.decodedIRData);
+    dumpDecoded(IrReceiver.decodedIRData.rawDataPtr);
     Serial.println("");
     irrecv.resume();
   }

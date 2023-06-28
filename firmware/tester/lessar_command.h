@@ -35,7 +35,7 @@ public:
         buffer[9*3] = '\0';
     }
 
-    static Result<LessarCommand> decodeFromRaw(int buffer[], int length) {
+    static Result<LessarCommand> decodeFromRaw(uint16_t *buffer, int length) {
         int commandBytes[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
         // offset as they appear in input stream
         int bitOffset = 0;
@@ -43,12 +43,17 @@ public:
 
         for(int i = 0; i < length; i++) {
             int val = closestValue(buffer[i]);
+            //Serial.print("closest value ");
+            //Serial.print(buffer[i]);
+            //Serial.print(" -> ");
+            //Serial.println(val);
 
             if (val == NEC_INITIATOR || val == NEC_FILLER) {
                 // only valid on byte boundaries
                 if (bitOffset % 8 != 0) {
                     return Result<LessarCommand>::error("NEC_INITIATOR or NEC_FILLER not on byte boundary");
                 }
+
                 prelude = 0;
                 continue;
             }
@@ -68,7 +73,10 @@ public:
                     return Result<LessarCommand>::error("NEC_SHORT or NEC_LONG expected when prelude is 1");
                 };
 
-                if (bitOffset >= sizeof(commandBytes) * 8 / sizeof(commandBytes[0])) {
+                if (bitOffset >= sizeof(commandBytes) / sizeof(commandBytes[0]) * 8) {
+                    //Serial.println("command too long. we only support 12 bytes");
+                    //Serial.println(bitOffset);
+                    //Serial.println(i);
                     return Result<LessarCommand>::error("comand too long. we only support 12 bytes");
                 }
 
@@ -78,6 +86,11 @@ public:
 
             prelude = 1 - prelude;
         }
+
+        debug("command bytes: %x %x %x %x %x %x %x %x %x %x %x %x\n",
+            commandBytes[0], commandBytes[1], commandBytes[2], commandBytes[3],
+            commandBytes[4], commandBytes[5], commandBytes[6], commandBytes[7],
+            commandBytes[8], commandBytes[9], commandBytes[10], commandBytes[11]);
 
         /// validating that command has format a !a b !b c !c a !a b !b c !c
         for (int i = 0; i < 6; i+=2) {

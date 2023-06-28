@@ -36,7 +36,7 @@ tasks:
       "mkdir -p /app/bin/tests && cd /app/controller && g++ tests.cpp -o /app/bin/tests/controller && /app/bin/tests/controller"
 
   test:tester: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c
-    "mkdir -p /app/bin/tests && cd /app/tester && g++ tests.cpp /app/lib/*.cpp -I/app/lib -o /app/bin/tests/tester && /app/bin/tests/tester"
+    "mkdir -p /app/bin/tests && cd /app/tester && g++ tests.cpp /app/lib/*.cpp -I/app/lib -DUNIT_TEST -o /app/bin/tests/tester && /app/bin/tests/tester"
 
   ## Does not work in docker with MacOS host, so have to have arduino-cli installed on host anyway =( 
   upload:tester: arduino-cli upload -p {{.TESTER_UPLOAD_TO_PORT}} --fqbn {{.TESTER_FQBN}} --input-dir ./bin/tester
