@@ -6,6 +6,7 @@
 // Include the IRremote library header
 //
 #include <IRremote.h>
+#include "./lessar_command.h"
 
 //------------------------------------------------------------------------------
 // Tell IRremote which Arduino pin is connected to the IR Receiver (TSOP4838)
@@ -92,6 +93,17 @@ void  dumpInfo (decode_results *results)
 //
 void  dumpRaw (irparams_struct *results)
 {
+    Result<LessarCommand> result = LessarCommand::decodeFromRaw(results->rawbuf, results->rawlen);
+    if (!result.ok()) {
+        Serial.print("Decoding error ");
+        Serial.println(result.error());
+    } else {
+        LessarCommand cmd = result.value();
+        char buffer[200];
+        cmd.printBits(buffer);
+        Serial.println(buffer);
+    }
+
   // Print Raw data
   Serial.print("Timing[");
   Serial.print(results->rawlen-1, DEC);
