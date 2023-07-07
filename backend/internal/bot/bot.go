@@ -6,12 +6,15 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Bot struct {
 	session            *irremote.Session
 	api                *tgbotapi.BotAPI
 	botAuthorizedUsers []int
+	offAt              time.Time
+	offCancel          context.CancelFunc
 }
 
 func NewBot(apikey string, botAuthorizedUsers string, session *irremote.Session) *Bot {
@@ -81,11 +84,13 @@ var buttons = [][]struct {
 }{
 	{
 		{"🔴выкл", handleButtonOff},
+		{"🔴⏳выкл через 60м", handleTimer(60)},
 		{"🥶+24", sendCommandHandler(commandCold24)},
 		{"💧+24", sendCommandHandler(commandWater24)},
 	},
 	{
 		{"? статус", handleButtonStatus},
+		{"🔴⏳выкл через 30м", handleTimer(30)},
 		{"🥶+20", sendCommandHandler(commandCold20)},
 		{"💧+20", sendCommandHandler(commandWater20)},
 	},
@@ -119,6 +124,11 @@ func lookupHandler(text string) func(b *Bot, ctx context.Context, chatId int64) 
 }
 
 func handleButtonOff(b *Bot, ctx context.Context, chatId int64) {
+	if b.offCancel != nil {
+		b.offCancel()
+		b.offAt = time.Time{}
+		b.offCancel = nil
+	}
 	b.sendCommandAndReplay(ctx, commandOff, chatId)
 }
 
@@ -153,7 +163,12 @@ func (b *Bot) respond(_ context.Context, chatId int64, text string) {
 		statusMessage = "Статус пульта: 🚫недоступен"
 	}
 
-	text += "\n" + statusMessage
+	var timerMessage string
+	if !b.offAt.IsZero() {
+		timerMessage = "\nЗапланировано выключение в " + b.offAt.Format("15:04")
+	}
+
+	text += "\n" + statusMessage + timerMessage
 	message := tgbotapi.NewMessage(chatId, text)
 	message.ReplyMarkup = customKeyboard
 
@@ -170,4 +185,34 @@ func (b *Bot) isAuthorized(id int) bool {
 		}
 	}
 	return false
+}
+
+func handleTimer(timeout int) func(b *Bot, ctx context.Context, chatId int64) {
+	return func(b *Bot, ctx context.Context, chatId int64) {
+		if b.offCancel != nil {
+			b.offCancel()
+		}
+
+		timerContext := context.Background()
+		timerContext, b.offCancel = context.WithCancel(timerContext)
+		ukraine, _ := time.LoadLocation("Europe/Kiev")
+		b.offAt = time.
+			Now().
+			In(ukraine).
+			Add(time.Duration(timeout) * time.Minute)
+
+		b.respond(ctx, chatId, "Таймер запущен. Кондиционер будет выключен через "+strconv.Itoa(timeout)+" минут.")
+
+		go func() {
+			select {
+			case <-timerContext.Done():
+				return
+			case <-time.After(time.Duration(timeout) * time.Minute):
+				b.offCancel()
+				b.offCancel = nil
+				b.offAt = time.Time{}
+				b.sendCommandAndReplay(ctx, commandOff, chatId)
+			}
+		}()
+	}
 }

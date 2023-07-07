@@ -7,7 +7,7 @@ tasks:
       IR_LISTEN_IP: 0.0.0.0
       IR_LISTEN_PORT: 4944
       IR_SHARED_SECRET: z3456yhgdfewrtyhnbvvcfrwetryhgb
-      BOT_API: "{{.BOT_API}}"
+      BOT_API: "{{.DEV_BOT_API}}"
       BOT_AUTHORIZED_USERS: "{{.BOT_AUTHORIZED_USERS}}"
     cmds:
       - go run cmd/server/server.go
