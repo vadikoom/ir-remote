@@ -85,13 +85,13 @@ var buttons = [][]struct {
 }{
 	{
 		{"🔴выкл", handleButtonOff},
-		{"🔴⏳выкл через 60м", handleTimer(60)},
+		{"🔴⏳60м", handleTimer(60)},
 		{"🥶+24", sendCommandHandler(commandCold24)},
 		{"💧+24", sendCommandHandler(commandWater24)},
 	},
 	{
 		{"? статус", handleButtonStatus},
-		{"🔴⏳выкл через 30м", handleTimer(30)},
+		{"🔴⏳30м", handleTimer(30)},
 		{"🥶+20", sendCommandHandler(commandCold20)},
 		{"💧+20", sendCommandHandler(commandWater20)},
 	},
