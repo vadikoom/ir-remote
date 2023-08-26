@@ -1,0 +1,12 @@
+version: 3
+
+tasks:
+  dev:
+    desc: Run the bot locally
+    env:
+      TELOXIDE_TOKEN: "{{.DEV_BOT_API}}"
+      IR_LISTEN_IP: 127.0.0.1
+      IR_LISTEN_PORT: 4944
+      BOT_AUTHORIZED_USERS: "{{.BOT_AUTHORIZED_USERS_V2}}"
+    cmds:
+      - cargo run

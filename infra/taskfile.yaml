@@ -35,6 +35,7 @@ tasks:
       - echo 'IR_SHARED_SECRET={{.IR_SHARED_SECRET}}' >> .env
       - echo 'BOT_API={{.BOT_API}}' >> .env
       - echo 'BOT_AUTHORIZED_USERS={{.BOT_AUTHORIZED_USERS}}' >> .env
+      - echo 'BOT_AUTHORIZED_USERS_V2="{{.BOT_AUTHORIZED_USERS_V2}}"' >> .env
 
   clean_env:
     desc: Clean up the .env file

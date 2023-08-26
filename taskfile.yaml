@@ -6,7 +6,6 @@ includes:
   backend:
     taskfile: ./backend/taskfile.yaml
     dir: ./backend
-
   firmware:
     taskfile: ./firmware/taskfile.yaml
     dir: ./firmware
@@ -14,6 +13,10 @@ includes:
   infra:
     taskfile: ./infra/taskfile.yaml
     dir: ./infra
+
+  tgbot:
+    taskfile: ./tgbot/taskfile.yaml
+    dir: ./tgbot
 
 tasks:
   'image:build':
@@ -29,10 +32,17 @@ tasks:
     env:
       IR_SHARED_SECRET: "{{.IR_SHARED_SECRET}}"
       IR_LISTEN_PORT: "{{.IR_LISTEN_PORT}}"
+      BOT_API: "{{.DEV_BOT_API}}"
+      DEV_BOT_API: "{{.DEV_BOT_API}}"
+      BOT_AUTHORIZED_USERS_V2: "{{.BOT_AUTHORIZED_USERS_V2}}"
     cmds:
       - "echo Running {{.IMG_NAME}}:latest"
       - "echo udp: port $IR_LISTEN_PORT"
-      - "docker run --rm -p $IR_LISTEN_PORT:12000/udp --env IR_SHARED_SECRET=$IR_SHARED_SECRET {{.IMG_NAME}}:latest"
+      - "docker run --rm -p $IR_LISTEN_PORT:12000/udp
+          -e TELOXIDE_TOKEN=$DEV_BOT_API
+          -e IR_SHARED_SECRET=$IR_SHARED_SECRET
+          -e BOT_AUTHORIZED_USERS=\"$BOT_AUTHORIZED_USERS_V2\"
+          {{.IMG_NAME}}:latest"
 
   'image:console':
     desc: Console into the docker image

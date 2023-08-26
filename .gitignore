@@ -11,3 +11,5 @@ cfg.toml
 
 .embuild
 esp32firmware/target
+
+tgbot/target
