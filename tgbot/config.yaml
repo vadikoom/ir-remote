@@ -5,7 +5,7 @@ x-internal-str:
   - &nameStatus "статус"
   - &nameOff "🔴викл"
   - &nameOff30 "🔴⏳30м"
-  - &nameOff60 "🔴⏳60м"
+  - &nameOff15 "🔴⏳15м"
   - &nameCool20 "🥶+20"
   - &nameCool24 "🥶+24"
   - &nameDeh20 "💧+20"
@@ -13,7 +13,7 @@ x-internal-str:
 
 x-internal-int:
   - &duration30min 1800 # seconds 1800
-  - &duration60min 3600 # seconds 3600
+  - &duration15min 900 # seconds 900
 
   # command bytes to send
   - &bytesOff [
@@ -40,7 +40,7 @@ x-internal-int:
 
 # bot always responds with same keyboard
 keyboard:
-  - [ *nameOff,    *nameOff60, *nameCool24, *nameDeh24 ]
+  - [ *nameOff,    *nameOff15, *nameCool24, *nameDeh24 ]
   - [ *nameStatus, *nameOff30, *nameCool20, *nameDeh20 ]
 
 server:
@@ -64,11 +64,11 @@ commands:
       - { type: sendRawCommand, bytes: *bytesOff}
       - { type: respond, text: "вимкнено\n{statusMessage}" }
 
-  offAfter60:
-    trigger: { type: exactMessage, text: *nameOff60 }
+  offAfter15:
+    trigger: { type: exactMessage, text: *nameOff15 }
     actions:
-      - { type: respond, text: "заплановано вимкнення через 60 хвилин\n{statusMessage}" }
-      - { type: delay, seconds: *duration60min, key: off }
+      - { type: respond, text: "заплановано вимкнення через 15 хвилин\n{statusMessage}" }
+      - { type: delay, seconds: *duration15min, key: off }
       - { type: sendRawCommand, bytes: *bytesOff}
       - { type: respond, text: "вимкнено\n{statusMessage}" }
 
