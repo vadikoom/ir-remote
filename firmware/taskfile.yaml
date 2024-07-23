@@ -7,8 +7,9 @@ vars:
   TESTER_UPLOAD_TO_PORT: '/dev/tty.usbmodem14101'
 
   CONTROLLER_FQBN: esp8266:esp8266:nodemcuv2:xtal=80
- # CONTROLLER_UPLOAD_TO_PORT: '/dev/tty.wchusbserial1420'
-  CONTROLLER_UPLOAD_TO_PORT: /dev/tty.SLAB_USBtoUART
+  #CONTROLLER_UPLOAD_TO_PORT: '/dev/tty.wchusbserial1420'
+  CONTROLLER_UPLOAD_TO_PORT: '/dev/tty.wchusbserial1410'
+ # CONTROLLER_UPLOAD_TO_PORT: /dev/tty.SLAB_USBtoUART
 
 tasks:
   setup:
@@ -17,15 +18,15 @@ tasks:
   console:
     docker run --rm  --privileged -v $(pwd):/app -it -v $(pwd):/app {{.IMAGE}} /bin/bash
 
-  build:tester: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c 
+  build:tester: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c
         "cd /app/tester && arduino-cli compile --fqbn {{.TESTER_FQBN}} --output-dir /app/bin/tester --library /app/lib ."
 
-  build:controller: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c 
-        "cd /app/controller && arduino-cli compile 
-          --fqbn {{.CONTROLLER_FQBN}} 
+  build:controller: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c
+        "cd /app/controller && arduino-cli compile
+          --fqbn {{.CONTROLLER_FQBN}}
           --build-property compiler.cpp.extra_flags='
             -DFIRMWARE_WIFI_SSID=\"{{.FIRMWARE_WIFI_SSID}}\"
-             -DFIRMWARE_WIFI_PASS=\"{{.FIRMWARE_WIFI_PASS}}\"  
+             -DFIRMWARE_WIFI_PASS=\"{{.FIRMWARE_WIFI_PASS}}\"
              -DFIRMWARE_REMOTE_HOST=\"{{.FIRMWARE_REMOTE_HOST}}\"
              -DFIRMWARE_SHARED_SECRET=\"{{.FIRMWARE_SHARED_SECRET}}\"
              '
@@ -38,9 +39,11 @@ tasks:
   test:tester: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c
     "mkdir -p /app/bin/tests && cd /app/tester && g++ tests.cpp /app/lib/*.cpp -I/app/lib -DUNIT_TEST -o /app/bin/tests/tester && /app/bin/tests/tester"
 
-  ## Does not work in docker with MacOS host, so have to have arduino-cli installed on host anyway =( 
+  ## Does not work in docker with MacOS host, so have to have arduino-cli installed on host anyway =(
   upload:tester: arduino-cli upload -p {{.TESTER_UPLOAD_TO_PORT}} --fqbn {{.TESTER_FQBN}} --input-dir ./bin/tester
   upload:controller: arduino-cli upload -p {{.CONTROLLER_UPLOAD_TO_PORT}} --fqbn {{.CONTROLLER_FQBN}} --input-dir ./bin/controller
+
+  monitor: arduino-cli monitor -p {{.CONTROLLER_UPLOAD_TO_PORT}} --fqbn {{.CONTROLLER_FQBN}} --config 115200
 
   build:
     cmds:
