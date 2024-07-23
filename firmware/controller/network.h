@@ -22,17 +22,17 @@ class Network {
 
             // Begin WiFi
             WiFi.begin(this->ssid, this->pass);
-            
+
             // Connecting to WiFi...
             Logger.print("Connecting to ");
             Logger.println(this->ssid);
             // Loop continuously while WiFi is not connected
-            
+
             while (WiFi.status() != WL_CONNECTED) {
                 delay(100);
                 Logger.print(".");
             }
-            
+
             // Connected to WiFi
             Logger.print("Connected! IP address: ");
             Logger.println(WiFi.localIP());
@@ -45,7 +45,11 @@ class Network {
                 Logger.println(this->remoteIP);
             } else {
                 Logger.print("Resolving remote host.... ");
-                WiFi.hostByName(this->remoteDomain, this->remoteIP, 10000);
+                while (!WiFi.hostByName(this->remoteDomain, this->remoteIP)) {
+                    delay(100);
+                    Logger.print(".");
+                }
+
                 Logger.print("Resolved remote host: ");
                 Logger.println(this->remoteIP);
             }
@@ -72,13 +76,13 @@ class Network {
             if (packetSize) {
                 Logger.print("Received packet of size: ");
                 Logger.println(packetSize);
-                int bytesRead = this->udp.read(buffer, len); 
+                int bytesRead = this->udp.read(buffer, len);
                 Logger.println(bytesRead);
                 return bytesRead;
             }
             return 0;
         }
-        
+
     private:
         WiFiUDP udp;
         const char *ssid;
