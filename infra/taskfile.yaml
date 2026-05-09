@@ -16,9 +16,9 @@ tasks:
       - scp docker-compose.yaml {{.UPLOAD_VIA}}:{{.REMOTE_DIR_NAME}}/docker-compose.yaml
 
   run:
-    desc: Run the docker-compose file on the remote machine, restarting if it's already running
+    desc: Run the docker compose file on the remote machine, restarting if it's already running
     cmds:
-      - ssh {{.UPLOAD_VIA}} 'cd {{.REMOTE_DIR_NAME}} && docker-compose up -d --force-recreate'
+      - ssh {{.UPLOAD_VIA}} 'cd {{.REMOTE_DIR_NAME}} && docker compose up -d --force-recreate'
 
   deploy:
     desc: Deploy the docker image to the remote machine
