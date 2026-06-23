@@ -48,7 +48,8 @@ void setup() {
     network.Connect();
 }
 
-void loop() {   
+void loop() {
+    network.EnsureConnected();
     uint64 now = millis();
     size_t len = network.Receive(iobuffer, sizeof(iobuffer));
     

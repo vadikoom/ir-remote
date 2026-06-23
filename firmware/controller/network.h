@@ -56,8 +56,31 @@ class Network {
 
             // Begin listening to UDP port
             this->udp.begin(this->localPort);
+            this->udpBound = true;
             Logger.print("Listening on UDP port ");
             Logger.println(this->localPort);
+        }
+
+        void EnsureConnected() {
+            if (WiFi.status() == WL_CONNECTED && this->udpBound) {
+                return;
+            }
+
+            if (WiFi.status() != WL_CONNECTED) {
+                Logger.println("WiFi disconnected, waiting for reconnect...");
+                this->udpBound = false;
+                while (WiFi.status() != WL_CONNECTED) {
+                    delay(500);
+                    Logger.print(".");
+                }
+                Logger.print("WiFi reconnected! IP: ");
+                Logger.println(WiFi.localIP());
+            }
+
+            this->udp.stop();
+            this->udp.begin(this->localPort);
+            this->udpBound = true;
+            Logger.println("UDP socket re-initialized");
         }
 
         void Send(char *buffer, size_t len) {
@@ -85,6 +108,7 @@ class Network {
 
     private:
         WiFiUDP udp;
+        bool udpBound = false;
         const char *ssid;
         const char *pass;
         uint16_t localPort;
