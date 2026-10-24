@@ -38,7 +38,7 @@ x-internal-int:
   - &bytesDeh20 [ 4200, 4300, 500, 1650, 500, 600, 450, 1700, 450, 1650, 500, 600, 500, 600, 450, 1650, 500, 600, 500, 600, 450, 1650, 500, 600, 450, 600, 450, 1700, 450, 1700, 450, 650, 450, 1650, 500, 600, 450, 650, 450, 600, 450, 1700, 450, 1700, 450, 1700, 450, 1650, 500, 1650, 500, 1650, 450, 1700, 450, 1700, 450, 600, 500, 600, 450, 600, 500, 600, 450, 650, 450, 600, 450, 650, 450, 1650, 450, 650, 450, 600, 450, 1700, 450, 650, 450, 600, 500, 1650, 450, 1700, 450, 600, 500, 1650, 500, 1650, 500, 600, 450, 1650, 500, 1650, 550, 5100, 4350, 4250, 500, 1650, 500, 600, 500, 1600, 550, 1600, 500, 600, 500, 600, 450, 1650, 500, 600, 550, 550, 450, 1650, 500, 600, 500, 550, 500, 1650, 500, 1650, 500, 600, 450, 1650, 550, 550, 500, 600, 450, 600, 500, 1600, 550, 1600, 500, 1650, 500, 1650, 500, 1650, 500, 1650, 500, 1650, 500, 1650, 500, 550, 500, 600, 500, 550, 500, 600, 500, 600, 450, 600, 500, 600, 450, 1650, 500, 600, 450, 600, 500, 1650, 500, 600, 450, 600, 500, 1650, 500, 1650, 500, 600, 450, 1650, 500, 1650, 500, 600, 450, 1650, 500, 1650, 500 ]
   - &bytesHeat28 [ 4350, 4300, 450, 1700, 450, 650, 450, 1650, 500, 1650, 500, 600, 450, 650, 450, 1650, 450, 650, 450, 600, 500, 1650, 450, 650, 450, 600, 450, 1700, 450, 1700, 450, 600, 500, 1650, 500, 1650, 450, 650, 450, 600, 450, 1700, 450, 1700, 450, 1700, 450, 1650, 500, 1750, 400, 600, 450, 1850, 300, 1800, 350, 600, 500, 600, 450, 600, 500, 600, 450, 600, 500, 1650, 450, 600, 350, 600, 450, 650, 450, 1700, 450, 1700, 450, 600, 450, 600, 500, 600, 450, 1650, 450, 1700, 450, 1700, 450, 600, 450, 600, 500, 1650, 500, 1650, 500, 5150, 4300, 4300, 500, 1650, 500, 600, 450, 1650, 500, 1650, 550, 550, 500, 550, 550, 1600, 550, 550, 550, 500, 550, 1600, 500, 600, 500, 550, 500, 1650, 500, 1600, 550, 600, 500, 1600, 600, 1550, 500, 600, 500, 550, 550, 1600, 500, 1650, 500, 1600, 550, 1600, 550, 1600, 600, 500, 500, 1650, 500, 1600, 550, 550, 500, 600, 500, 550, 500, 600, 500, 550, 600, 1650, 500, 600, 550, 550, 500, 600, 500, 1600, 500, 1650, 500, 600, 500, 600, 550, 600, 500, 1650, 500, 1600, 550, 1600, 500, 600, 500, 600, 450, 1650, 500, 1650, 550 ]
 
-# bot always responds with same keyboard
+# The bot attaches the same keyboard to every response.
 keyboard:
   - [ *nameOff, *nameOff30, *nameOff60 ]
   - [ *nameStatus, *nameDeh20, *nameCool20, *nameHeat28 ]
@@ -47,7 +47,7 @@ server:
   onlineMessage: "✅пульт працює"
   offlineMessage: "❌пульт не працює"
 
-# commands scripts. Rust code only execute scripts here, it is not aware of meaning of commands
+# Command scripts define appliance behavior; Rust executes the configured actions.
 commands:
   off:
     trigger: { type: exactMessage, text: *nameOff }
@@ -81,25 +81,25 @@ commands:
     trigger: { type: exactMessage, text: *nameCool20 }
     actions:
       - { type: sendRawCommand, bytes: *bytesCool20 }
-      - { type: respond, text: "включено в режимі охолодження +20\n{statusMessage}"}
+      - { type: respond, text: "увімкнено в режимі охолодження +20\n{statusMessage}"}
 
   Cool24:
     trigger: { type: exactMessage, text: *nameCool24 }
     actions:
       - { type: sendRawCommand, bytes: *bytesCool24 }
-      - { type: respond, text: "включено в режимі охолодження +24\n{statusMessage}"}
+      - { type: respond, text: "увімкнено в режимі охолодження +24\n{statusMessage}"}
 
   Deh20:
     trigger: { type: exactMessage, text: *nameDeh20 }
     actions:
       - { type: sendRawCommand, bytes: *bytesDeh20 }
-      - { type: respond, text: "включено в режимі дегідратації +20\n{statusMessage}"}
+      - { type: respond, text: "увімкнено в режимі осушення +20\n{statusMessage}"}
 
   Heat28:
     trigger: { type: exactMessage, text: *nameHeat28 }
     actions:
       - { type: sendRawCommand, bytes: *bytesHeat28 }
-      - { type: respond, text: "включено в режимі обігріву +28\n{statusMessage}"}
+      - { type: respond, text: "увімкнено в режимі обігріву +28\n{statusMessage}"}
 
 handlers:
   genericError:
@@ -107,9 +107,9 @@ handlers:
       - { type: respond, text: "{error}" }
 
 messages:
-  commandNotFound: "❌Невідома команда. Використовуйте кнопки щоб вибрати команду"
-  telegramError: "❌Помилка відправки повідомлення в телеграм"
-  commandCanceled: "❌Команду відмінено"
+  commandNotFound: "❌Невідома команда. Використовуйте кнопки, щоб вибрати команду"
+  telegramError: "❌Не вдалося надіслати повідомлення в Telegram"
+  commandCanceled: "❌Команду скасовано"
   internalError: "❌Внутрішня помилка. Спробуйте пізніше"
   noResponseFromRc: "❌Пульт не відповідає на запити"
-  canNotSendWhenOffline: "❌Не вдалося відправити команду бо пульт не працює"
+  canNotSendWhenOffline: "❌Не вдалося надіслати команду, бо пульт не працює"
