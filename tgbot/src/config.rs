@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 
 const CONFIG: &[u8] = include_bytes!("../config.yaml");
 
@@ -66,12 +66,10 @@ pub struct ActionsOnly {
     pub actions: Vec<Action>,
 }
 
-lazy_static! {
-    static ref CONFIG_PARSED: Config = {
-        let s = std::str::from_utf8(CONFIG).unwrap();
-        serde_yaml::from_str(s).unwrap()
-    };
-}
+static CONFIG_PARSED: LazyLock<Config> = LazyLock::new(|| {
+    let s = std::str::from_utf8(CONFIG).unwrap();
+    serde_norway::from_str(s).unwrap()
+});
 
 pub fn get_config() -> ConfigType {
     &CONFIG_PARSED
@@ -85,13 +83,11 @@ pub struct User {
 
 pub type UsersType = &'static Vec<User>;
 
-lazy_static! {
-    static ref USERS_PARSED: Vec<User> = {
-        let allow_access = std::env::var("BOT_AUTHORIZED_USERS")
-            .expect("env variable BOT_AUTHORIZED_USERS should be defined");
-        serde_yaml::from_str(&allow_access).unwrap()
-    };
-}
+static USERS_PARSED: LazyLock<Vec<User>> = LazyLock::new(|| {
+    let allow_access = std::env::var("BOT_AUTHORIZED_USERS")
+        .expect("env variable BOT_AUTHORIZED_USERS should be defined");
+    serde_norway::from_str(&allow_access).unwrap()
+});
 
 pub fn get_users() -> UsersType {
     &USERS_PARSED
@@ -100,6 +96,19 @@ pub fn get_users() -> UsersType {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn authorized_users_accept_existing_yaml_and_json_formats() {
+        for input in [
+            r#"[{id: 123456789, name: "Your name"}]"#,
+            r#"[{"id":123456789,"name":"Your name"}]"#,
+        ] {
+            let users: Vec<User> = serde_norway::from_str(input).unwrap();
+            assert_eq!(users.len(), 1);
+            assert_eq!(users[0].id, 123456789);
+            assert_eq!(users[0].name, "Your name");
+        }
+    }
 
     #[test]
     fn mode_signals_encode_coolix_commands_in_both_frames() {
