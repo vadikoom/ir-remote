@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Rust checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: tgbot
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Test bot and UDP transport
+        run: cargo test --locked
+      - name: Check lints
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+  firmware:
+    name: Firmware security checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Fetch ArduinoJson 7.4.3
+        run: git clone --depth 1 --branch v7.4.3 https://github.com/bblanchon/ArduinoJson.git "$RUNNER_TEMP/ArduinoJson"
+      - name: Test authentication, validation, and shared packet fixtures
+        run: |
+          g++ -std=c++17 -g -fsanitize=address,undefined \
+            -Ifirmware/tests/stubs -I"$RUNNER_TEMP/ArduinoJson/src" \
+            firmware/tests/security.cpp firmware/controller/src/monocypher/monocypher.c \
+            -o "$RUNNER_TEMP/firmware-security-tests"
+          ASAN_OPTIONS=abort_on_error=1 "$RUNNER_TEMP/firmware-security-tests" tgbot/testdata
