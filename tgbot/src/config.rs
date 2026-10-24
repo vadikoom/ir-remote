@@ -20,7 +20,6 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Messages {
-    pub not_implemented: String,
     pub command_not_found: String,
     pub telegram_error: String,
     pub command_canceled: String,

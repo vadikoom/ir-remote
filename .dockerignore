@@ -1,6 +1,10 @@
 .git
 .idea
+.vscode
 *.iml
 
-app/target
-app/.env
+*.env
+.env.*
+
+tgbot/target
+firmware/bin

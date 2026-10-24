@@ -58,7 +58,6 @@ class Application {
         IRsend irsend;
 
         uint16_t commandBuffer[300];
-        int lastTimeStatusSent = 0;
         int lastCommandId = 0;
 };
 

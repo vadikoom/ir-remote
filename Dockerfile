@@ -1,11 +1,3 @@
-FROM golang:1.20-alpine as builder
-RUN apk update && apk add --no-cache git
-WORKDIR /app
-COPY backend/go.mod backend/go.sum ./
-RUN go mod download
-COPY backend/ .
-RUN CGO_ENABLED=0 GOOS=linux go build -o backend ./cmd/server
-
 FROM rust:1.70-alpine as builder-rust
 RUN apk update && apk add --no-cache git build-base pkgconfig openssl-dev
 WORKDIR /app
@@ -24,7 +16,6 @@ RUN cargo build --release
 FROM alpine:latest
 WORKDIR /app
 RUN apk update && apk add openssl libgcc
-# RUN apk add valgrind gcc libc-dev
 
 COPY --from=builder-rust /app/target/release/tgbot ./backend
 

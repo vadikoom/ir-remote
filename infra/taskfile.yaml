@@ -7,7 +7,7 @@ tasks:
       - docker save {{.IMG_NAME}}:latest | ssh {{.UPLOAD_VIA}} 'docker load'
 
   scp:
-    desc: desc copy env and docker-compose files to remote machine
+    desc: Copy env and docker-compose files to remote machine
     cmds:
       - task: generate_env
       - defer: { task: clean_env }
@@ -32,9 +32,7 @@ tasks:
     cmds:
       - echo 'IMG_NAME={{.IMG_NAME}}' > .env
       - echo 'IR_LISTEN_PORT={{.IR_LISTEN_PORT}}' >> .env
-      - echo 'IR_SHARED_SECRET={{.IR_SHARED_SECRET}}' >> .env
       - echo 'BOT_API={{.BOT_API}}' >> .env
-      - echo 'BOT_AUTHORIZED_USERS={{.BOT_AUTHORIZED_USERS}}' >> .env
       - echo 'BOT_AUTHORIZED_USERS_V2="{{.BOT_AUTHORIZED_USERS_V2}}"' >> .env
 
   clean_env:

@@ -107,7 +107,6 @@ handlers:
       - { type: respond, text: "{error}" }
 
 messages:
-  notImplemented: "❌Функція ще не реалізована"
   commandNotFound: "❌Невідома команда. Використовуйте кнопки щоб вибрати команду"
   telegramError: "❌Помилка відправки повідомлення в телеграм"
   commandCanceled: "❌Команду відмінено"

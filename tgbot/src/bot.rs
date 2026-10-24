@@ -177,7 +177,6 @@ impl Interpreter {
             Error::CommandNotFound => { m.command_not_found.clone() }
             Error::ServerError(server) => {
                 match server {
-                    server::Error::NotImplemented => { m.not_implemented.clone() }
                     server::Error::Io(io) => { format!("{}: {:?}", m.internal_error, io) }
                     server::Error::MpcResponseTimeout => { format!("{}: {:?}", m.internal_error, "MpcResponseTimeout") }
                     server::Error::IRAckTimeout => { m.no_response_from_rc.clone() }

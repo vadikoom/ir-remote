@@ -7,9 +7,7 @@ vars:
   TESTER_UPLOAD_TO_PORT: '/dev/tty.usbmodem14101'
 
   CONTROLLER_FQBN: esp8266:esp8266:nodemcuv2:xtal=80
-  #CONTROLLER_UPLOAD_TO_PORT: '/dev/tty.wchusbserial1420'
   CONTROLLER_UPLOAD_TO_PORT: '/dev/tty.wchusbserial1410'
- # CONTROLLER_UPLOAD_TO_PORT: /dev/tty.SLAB_USBtoUART
 
 tasks:
   setup:
@@ -33,11 +31,8 @@ tasks:
           --output-dir /app/bin/controller .
         "
 
-  test:controller: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c
-      "mkdir -p /app/bin/tests && cd /app/controller && g++ tests.cpp -o /app/bin/tests/controller && /app/bin/tests/controller"
-
   test:tester: docker run --rm -v $(pwd):/app {{.IMAGE}} /bin/bash -c
-    "mkdir -p /app/bin/tests && cd /app/tester && g++ tests.cpp /app/lib/*.cpp -I/app/lib -DUNIT_TEST -o /app/bin/tests/tester && /app/bin/tests/tester"
+    "mkdir -p /app/bin/tests && cd /app/tester && g++ tests.cpp -I/app/lib -DUNIT_TEST -o /app/bin/tests/tester && /app/bin/tests/tester"
 
   ## Does not work in docker with MacOS host, so have to have arduino-cli installed on host anyway =(
   upload:tester: arduino-cli upload -p {{.TESTER_UPLOAD_TO_PORT}} --fqbn {{.TESTER_FQBN}} --input-dir ./bin/tester
@@ -52,7 +47,6 @@ tasks:
 
   test:
     cmds:
-      - task: test:controller
       - task: test:tester
 
   clean:

@@ -5,8 +5,6 @@ services:
     image: ${IMG_NAME}:latest
     restart: always
     environment:
-      IR_SHARED_SECRET: ${IR_SHARED_SECRET}
-      BOT_API: ${BOT_API}
       TELOXIDE_TOKEN: ${BOT_API}
       BOT_AUTHORIZED_USERS: '${BOT_AUTHORIZED_USERS_V2}'
     ports:

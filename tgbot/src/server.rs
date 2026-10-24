@@ -20,10 +20,6 @@ mod transport;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[allow(dead_code)]
-    #[error("Not Implemented")]
-    NotImplemented,
-
     #[error("IO Error occurred in server: {0}")]
     Io(#[from] io::Error),
 

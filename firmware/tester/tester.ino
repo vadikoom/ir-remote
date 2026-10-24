@@ -26,21 +26,6 @@ void  setup ( )
 }
 
 //+=============================================================================
-// Display IR code
-//
-void  ircode (decode_results *results)
-{
-  // Panasonic has an Address
-  if (results->decode_type == PANASONIC) {
-    Serial.print(results->address, HEX);
-    Serial.print(":");
-  }
-
-  // Print Code
-  Serial.print(results->value, HEX);
-}
-
-//+=============================================================================
 // Display encoding type
 //
 void  encoding(decode_type_t x)
@@ -64,30 +49,6 @@ void  encoding(decode_type_t x)
     case PANASONIC:    Serial.print("PANASONIC");     break ;
     case DENON:        Serial.print("Denon");         break ;
   }
-}
-
-//+=============================================================================
-// Dump out the decode_results structure.
-//
-void  dumpInfo (decode_results *results)
-{
-  // Check if the buffer overflowed
-  if (results->overflow) {
-    Serial.println("IR code too long. Edit IRremoteInt.h and increase RAWBUF");
-    return;
-  }
-
-  // Show Encoding standard
-  Serial.print("Encoding  : ");
-  encoding(results->decode_type);
-  Serial.println("");
-
-  // Show Code & length
-  Serial.print("Code      : ");
-  ircode(results);
-  Serial.print(" (");
-  Serial.print(results->bits, DEC);
-  Serial.println(" bits)");
 }
 
 void dumpDecoded(irparams_struct *results) {
@@ -240,14 +201,4 @@ void  loop ( )
     irrecv.resume();
   }
 
-  // decode_results  results;        // Somewhere to store the results
-
-
-  // if (irrecv.decode(&results)) {  // Grab an IR code
-  //   dumpInfo(&results);           // Output the results
-  //   dumpRaw(&results);            // Output the results in RAW format
-  //   dumpCode(&results);           // Output the results as source code
-  //   Serial.println("");           // Blank line between entries
-  //   irrecv.resume();              // Prepare for the next value
-  // }
 }
