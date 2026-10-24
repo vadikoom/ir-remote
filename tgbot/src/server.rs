@@ -24,7 +24,7 @@ pub enum Error {
     Io(#[from] io::Error),
 
     #[error("JSON error: {0}")]
-    JsonError(#[from] serde_json::Error),
+    Json(#[from] serde_json::Error),
 
     #[error("Timeout while waiting for MPC response")]
     MpcResponseTimeout,
@@ -33,10 +33,13 @@ pub enum Error {
     IRAckTimeout,
 
     #[error("{0}")]
-    MpcGenericError(&'static str),
+    MpcChannel(&'static str),
+
+    #[error("Command superseded by another command")]
+    CommandSuperseded,
 
     #[error("Can not send message when IR is offline")]
-    CanNotSendWhenOffline
+    CanNotSendWhenOffline,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -59,5 +62,8 @@ pub async fn new(bind_address: Ipv4Addr, bind_port: u16) -> Result<(ServerRunner
     info!("starting server on {:?}", addr);
     let socket = UdpSocket::bind(addr).await?;
 
-    Ok((ServerRunner::new(rx, socket, tx_online), ServerHandle::new(tx, rx_online)))
+    Ok((
+        ServerRunner::new(rx, socket, tx_online),
+        ServerHandle::new(tx, rx_online),
+    ))
 }

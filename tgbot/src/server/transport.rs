@@ -35,16 +35,21 @@ impl Decoder for Codec {
 impl Encoder<Command> for Codec {
     type Error = super::Error;
 
-    fn encode(&mut self, item: Command, dst: &mut BytesMut) -> std::result::Result<(), Self::Error> {
+    fn encode(
+        &mut self,
+        item: Command,
+        dst: &mut BytesMut,
+    ) -> std::result::Result<(), Self::Error> {
         serde_json::to_writer(dst.writer(), &item)?;
         Ok(())
     }
 }
 
-
-pub fn transport(socket: &UdpSocket) -> (
-    impl Stream<Item=super::Result<(Status, SocketAddr)>> + '_,
-    impl Sink<(Command, SocketAddr), Error=super::Error> + '_
+pub fn transport(
+    socket: &UdpSocket,
+) -> (
+    impl Stream<Item = super::Result<(Status, SocketAddr)>> + '_,
+    impl Sink<(Command, SocketAddr), Error = super::Error> + '_,
 ) {
     let a = UdpFramed::new(socket, Codec);
     let b = UdpFramed::new(socket, Codec);

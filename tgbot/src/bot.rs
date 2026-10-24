@@ -3,14 +3,14 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, RngExt};
 use teloxide::{
     dptree::deps,
     payloads::SendMessage,
     prelude::*,
-    RequestError,
     requests::JsonRequest,
     types::{KeyboardButton, KeyboardMarkup, ReplyMarkup},
+    RequestError,
 };
 use tokio::select;
 use tokio::time::sleep;
@@ -35,7 +35,7 @@ pub enum Error {
     CommandNotFound,
 
     #[error("Server error: {0}")]
-    ServerError(#[from] server::Error),
+    Server(#[from] server::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -47,7 +47,7 @@ struct Interpreter {
     delay: Delay,
     server: ServerHandle,
     tid: String,
-    last_error: Option<Error>
+    last_error: Option<Error>,
 }
 
 impl Interpreter {
@@ -58,8 +58,20 @@ impl Interpreter {
         delay: Delay,
         server: ServerHandle,
     ) -> Self {
-        let tid = rand::thread_rng().sample_iter(&Alphanumeric).take(7).map(char::from).collect();
-        return Self { cfg, bot, message, delay, server, tid, last_error: None };
+        let tid = rand::rng()
+            .sample_iter(&Alphanumeric)
+            .take(7)
+            .map(char::from)
+            .collect();
+        Self {
+            cfg,
+            bot,
+            message,
+            delay,
+            server,
+            tid,
+            last_error: None,
+        }
     }
 
     #[instrument(skip_all, fields(tid=self.tid, chat=%self.message.chat.id))]
@@ -76,7 +88,7 @@ impl Interpreter {
     }
 
     async fn execute_fallible(&mut self) -> Result<()> {
-        for (_, cmd) in &self.cfg.commands {
+        for cmd in self.cfg.commands.values() {
             if self.execute_trigger(&cmd.trigger)? {
                 self.execute_actions(&cmd.actions).await?;
                 return Ok(());
@@ -87,16 +99,16 @@ impl Interpreter {
     }
 
     fn execute_trigger(&mut self, trigger: &'static CommandTrigger) -> Result<bool> {
-        return match trigger {
+        match trigger {
             CommandTrigger::ExactMessage { text: expected } => match self.message.text() {
                 None => Ok(false),
 
                 Some(actual) => Ok(expected == actual),
             },
-        };
+        }
     }
 
-    async fn execute_actions(&mut self, actions: &'static Vec<Action>) -> Result<()> {
+    async fn execute_actions(&mut self, actions: &'static [Action]) -> Result<()> {
         for a in actions {
             self.execute_action(a).await?
         }
@@ -124,9 +136,13 @@ impl Interpreter {
     }
 
     async fn handle_generic_error(&mut self, error: Error) -> Result<()> {
-        error!("Error happened, falling back to generic error actions, error: {:?}", error);
+        error!(
+            "Error happened, falling back to generic error actions, error: {:?}",
+            error
+        );
         self.last_error = Some(error);
-        self.execute_actions(&self.cfg.handlers.generic_error.actions).await?;
+        self.execute_actions(&self.cfg.handlers.generic_error.actions)
+            .await?;
         Ok(())
     }
 
@@ -140,7 +156,7 @@ impl Interpreter {
         let kb = &self.cfg.keyboard;
 
         message.reply_markup = Some(ReplyMarkup::Keyboard(KeyboardMarkup::new(
-            kb.iter().map(|row| row.iter().map(|text| KeyboardButton::new(text))),
+            kb.iter().map(|row| row.iter().map(KeyboardButton::new)),
         )));
 
         JsonRequest::new(self.bot.clone(), message).await?;
@@ -150,8 +166,7 @@ impl Interpreter {
     fn render_template(&mut self, template: &'static str) -> String {
         let mut result = String::from(template);
 
-        if result.contains("{error}") && self.last_error.is_some() {
-            let err = self.last_error.as_ref().unwrap();
+        if let Some(err) = &self.last_error {
             result = result.replace("{error}", &self.format_error(err))
         }
 
@@ -165,26 +180,33 @@ impl Interpreter {
             result = result.replace("{statusMessage}", message)
         }
 
-        return result;
+        result
     }
 
     fn format_error(&self, error: &Error) -> String {
         let m = &self.cfg.messages;
 
         match error {
-            Error::RequestError(_) => { m.telegram_error.clone() }
-            Error::Cancelled => {m.command_canceled.clone() }
-            Error::CommandNotFound => { m.command_not_found.clone() }
-            Error::ServerError(server) => {
-                match server {
-                    server::Error::Io(io) => { format!("{}: {:?}", m.internal_error, io) }
-                    server::Error::MpcResponseTimeout => { format!("{}: {:?}", m.internal_error, "MpcResponseTimeout") }
-                    server::Error::IRAckTimeout => { m.no_response_from_rc.clone() }
-                    server::Error::MpcGenericError(msg) => { format!("{}: {:?}", m.internal_error, msg) }
-                    server::Error::CanNotSendWhenOffline => { m.can_not_send_when_offline.clone() }
-                    server::Error::JsonError(er) => { format!("{}: {:?}", m.internal_error, er) }
+            Error::RequestError(_) => m.telegram_error.clone(),
+            Error::Cancelled => m.command_canceled.clone(),
+            Error::CommandNotFound => m.command_not_found.clone(),
+            Error::Server(server) => match server {
+                server::Error::Io(io) => {
+                    format!("{}: {:?}", m.internal_error, io)
                 }
-            }
+                server::Error::MpcResponseTimeout => {
+                    format!("{}: {:?}", m.internal_error, "MpcResponseTimeout")
+                }
+                server::Error::CommandSuperseded => m.command_canceled.clone(),
+                server::Error::IRAckTimeout => m.no_response_from_rc.clone(),
+                server::Error::MpcChannel(msg) => {
+                    format!("{}: {:?}", m.internal_error, msg)
+                }
+                server::Error::CanNotSendWhenOffline => m.can_not_send_when_offline.clone(),
+                server::Error::Json(er) => {
+                    format!("{}: {:?}", m.internal_error, er)
+                }
+            },
         }
     }
 }
@@ -201,14 +223,15 @@ impl Delay {
 
     pub async fn delay(&self, seconds: u64, key: &'static str) -> Result<()> {
         let ct = CancellationToken::new();
-        let option = self.cts.lock().unwrap().insert(key, ct.clone());
-
-        if let Some(ct) = option {
-            info!(
-                "Cancelling other delays for key={} and scheduling a new one with delay {} seconds",
-                key, seconds
-            );
-            ct.cancel();
+        {
+            let mut timers = self.cts.lock().unwrap();
+            if let Some(ct) = timers.insert(key, ct.clone()) {
+                info!(
+                    key,
+                    seconds, "Cancelling previous delay and scheduling its replacement"
+                );
+                ct.cancel();
+            }
         }
 
         select! {
@@ -218,12 +241,20 @@ impl Delay {
             }
 
             _ = sleep(std::time::Duration::from_secs(seconds)) => {
+                let mut timers = self.cts.lock().unwrap();
+                if ct.is_cancelled() {
+                    return Err(Error::Cancelled);
+                }
+                timers.remove(key);
                 info!("Delay successfully finished");
-                self.cts.lock().unwrap().remove(key);
                 Ok(())
             }
         }
     }
+}
+
+fn is_authorized(sender: Option<u64>, users: &[crate::config::User]) -> bool {
+    sender.is_some_and(|id| users.iter().any(|user| user.id == id))
 }
 
 pub async fn run(cfg: ConfigType, server: ServerHandle) {
@@ -232,20 +263,162 @@ pub async fn run(cfg: ConfigType, server: ServerHandle) {
 
     Dispatcher::builder(
         bot,
-        Update::filter_message().endpoint(
-            move |bot: Bot, message: Message, delay: Delay, server: ServerHandle| async move {
-                let mut interpreter = Interpreter::new(cfg, bot, message, delay, server);
+        Update::filter_message()
+            .filter(|message: Message| {
+                is_authorized(
+                    message.from.as_ref().map(|user| user.id.0),
+                    crate::config::get_users(),
+                )
+            })
+            .endpoint(
+                move |bot: Bot, message: Message, delay: Delay, server: ServerHandle| async move {
+                    let mut interpreter = Interpreter::new(cfg, bot, message, delay, server);
 
-                tokio::spawn(async move {
-                    interpreter.execute().await;
-                });
+                    tokio::spawn(async move {
+                        interpreter.execute().await;
+                    });
 
-                Result::Ok(())
-            },
-        ),
+                    Result::Ok(())
+                },
+            ),
     )
-        .dependencies(deps![delay, server])
-        .build()
-        .dispatch()
-        .await;
+    .dependencies(deps![delay, server])
+    .build()
+    .dispatch()
+    .await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures::poll;
+    use std::time::Duration;
+
+    #[test]
+    fn authorization_requires_a_known_sender() {
+        let users = vec![
+            crate::config::User {
+                id: 10,
+                name: "First".into(),
+            },
+            crate::config::User {
+                id: 20,
+                name: "Second".into(),
+            },
+        ];
+        assert!(is_authorized(Some(10), &users));
+        assert!(is_authorized(Some(20), &users));
+        assert!(!is_authorized(Some(30), &users));
+        assert!(!is_authorized(None, &users));
+        assert!(!is_authorized(Some(10), &[]));
+    }
+
+    #[tokio::test]
+    async fn status_command_sends_expected_text_and_keyboard_to_telegram() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+
+        let cfg = crate::config::get_config();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api_url = format!("http://{}/", listener.local_addr().unwrap())
+            .parse()
+            .unwrap();
+        let message_json = serde_json::json!({
+            "message_id": 1, "date": 0,
+            "chat": {"id": 10, "type": "private", "first_name": "Test"},
+            "from": {"id": 10, "is_bot": false, "first_name": "Test"},
+            "text": "статус"
+        });
+        let message: Message = serde_json::from_value(message_json.clone()).unwrap();
+        let mock = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            let mut buffer = [0; 4096];
+            let (headers, body_start, content_length) = loop {
+                let count = socket.read(&mut buffer).await.unwrap();
+                assert_ne!(count, 0);
+                request.extend_from_slice(&buffer[..count]);
+                if let Some(end) = request.windows(4).position(|bytes| bytes == b"\r\n\r\n") {
+                    let headers = String::from_utf8(request[..end].to_vec()).unwrap();
+                    let content_length: usize = headers
+                        .lines()
+                        .find_map(|line| {
+                            let (key, value) = line.split_once(':')?;
+                            key.eq_ignore_ascii_case("content-length")
+                                .then(|| value.trim().parse().unwrap())
+                        })
+                        .unwrap();
+                    break (headers, end + 4, content_length);
+                }
+            };
+            while request.len() < body_start + content_length {
+                let count = socket.read(&mut buffer).await.unwrap();
+                assert_ne!(count, 0);
+                request.extend_from_slice(&buffer[..count]);
+            }
+            assert!(headers
+                .to_ascii_lowercase()
+                .starts_with("post /bot12345:test/sendmessage "));
+            let body: serde_json::Value =
+                serde_json::from_slice(&request[body_start..body_start + content_length]).unwrap();
+            let response = serde_json::json!({"ok": true, "result": message_json}).to_string();
+            let response = format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", response.len(), response);
+            socket.write_all(response.as_bytes()).await.unwrap();
+            body
+        });
+        let (_runner, handle) = server::new(std::net::Ipv4Addr::LOCALHOST, 0).await.unwrap();
+        let bot = Bot::new("12345:TEST").set_api_url(api_url);
+        let mut interpreter = Interpreter::new(cfg, bot, message, Delay::new(), handle);
+        tokio::time::timeout(Duration::from_secs(5), interpreter.execute_fallible())
+            .await
+            .unwrap()
+            .unwrap();
+        let body = mock.await.unwrap();
+        assert_eq!(body["chat_id"], 10);
+        assert_eq!(body["text"], cfg.server.offline_message);
+        let keyboard = body["reply_markup"]["keyboard"].as_array().unwrap();
+        assert_eq!(keyboard.len(), cfg.keyboard.len());
+        for (actual_row, expected_row) in keyboard.iter().zip(&cfg.keyboard) {
+            let actual: Vec<_> = actual_row
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|button| button["text"].as_str().unwrap())
+                .collect();
+            assert_eq!(
+                actual,
+                expected_row.iter().map(String::as_str).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn expired_timer_cannot_complete_after_replacement() {
+        let delay = Delay::new();
+        let old = delay.delay(1, "off");
+        tokio::pin!(old);
+        assert!(poll!(old.as_mut()).is_pending());
+        tokio::time::advance(Duration::from_secs(1)).await;
+
+        let replacement = delay.delay(3600, "off");
+        tokio::pin!(replacement);
+        assert!(poll!(replacement.as_mut()).is_pending());
+        assert!(matches!(old.await, Err(Error::Cancelled)));
+        assert!(delay.cts.lock().unwrap().contains_key("off"));
+
+        delay.delay(0, "off").await.unwrap();
+        assert!(matches!(replacement.await, Err(Error::Cancelled)));
+        assert!(delay.cts.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn different_timer_keys_do_not_cancel_each_other() {
+        let delay = Delay::new();
+        let first = delay.delay(1, "first");
+        let second = delay.delay(2, "second");
+        let (first, second) = tokio::join!(first, second);
+        first.unwrap();
+        second.unwrap();
+        assert!(delay.cts.lock().unwrap().is_empty());
+    }
 }

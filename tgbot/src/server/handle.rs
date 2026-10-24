@@ -27,7 +27,7 @@ impl ServerHandle {
     }
 
     pub fn is_online(&self) -> bool {
-        self.online.borrow().clone()
+        *self.online.borrow()
     }
 
     async fn send_command(&self, cmd: MpcRequest) -> Result<MpcResponse> {
@@ -35,11 +35,11 @@ impl ServerHandle {
         self.tx
             .send((cmd, tx))
             .await
-            .map_err(|_| Error::MpcGenericError("failed sending MPC message"))?;
+            .map_err(|_| Error::MpcChannel("failed sending MPC message"))?;
 
-        let result = rx.await.map_err(|_| {
-            Error::MpcGenericError("Server dropped channel before sending response")
-        })?;
+        let result = rx
+            .await
+            .map_err(|_| Error::MpcChannel("Server dropped channel before sending response"))?;
 
         Ok(result)
     }

@@ -53,7 +53,8 @@ task firmware:upload:controller
 ```
 
 Uploading requires `arduino-cli` on the host with the ESP8266 core installed; compilation runs in Docker.
-For local bot development, install Rust and run `task tgbot:dev` (binds to `127.0.0.1:4944`).
+For local bot development, install Rust with rustup and run `task tgbot:dev` (binds to `127.0.0.1:4944`).
+The toolchain is pinned to Rust 1.99.1 in `rust-toolchain.toml`; the bot uses edition 2021.
 For optional SSH deployment, fill in the deployment variables in `.env` and use `task deploy` after building.
 
 ## Adapting and checking
@@ -64,5 +65,6 @@ The capture device is an independent tool for inspecting remote signals, with it
 Capture builds additionally need `IRremote` installed in the build image. Its serial output uses 9600 baud;
 the controller uses 115200.
 
-Run `cargo test --locked` inside `tgbot/` for the configured IR signal checks, or `task firmware:test`
+Run `cargo test --locked` inside `tgbot/` for IR signal, authorization, timer, Telegram API, and UDP checks.
+Run `cargo clippy --all-targets --locked -- -D warnings` for Rust lint checks, or `task firmware:test`
 for the capture decoder diagnostic. Capture diagnostics print decoded data; they are not assertion-based tests.
