@@ -7,5 +7,6 @@ services:
     environment:
       TELOXIDE_TOKEN: ${BOT_API}
       BOT_AUTHORIZED_USERS: '${BOT_AUTHORIZED_USERS_V2}'
+      IR_SHARED_SECRET: ${IR_SHARED_SECRET:?shared key required}
     ports:
       - "${IR_LISTEN_PORT}:12000/udp"

@@ -14,12 +14,15 @@ use tracing::{info, instrument};
 pub use handle::ServerHandle;
 pub use runner::ServerRunner;
 
+pub(crate) mod crypto;
 mod handle;
 mod runner;
 mod transport;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("Security error: {0}")]
+    Security(&'static str),
     #[error("IO Error occurred in server: {0}")]
     Io(#[from] io::Error),
 
@@ -54,7 +57,11 @@ enum MpcResponse {
     SendRcResponse(Result<()>),
 }
 
-pub async fn new(bind_address: Ipv4Addr, bind_port: u16) -> Result<(ServerRunner, ServerHandle)> {
+pub async fn new(
+    bind_address: Ipv4Addr,
+    bind_port: u16,
+    crypto: crypto::Crypto,
+) -> Result<(ServerRunner, ServerHandle)> {
     let (tx, rx) = mpsc::channel(1);
     let (tx_online, rx_online) = watch::channel(false);
     let addr = SocketAddrV4::new(bind_address, bind_port);
@@ -63,7 +70,7 @@ pub async fn new(bind_address: Ipv4Addr, bind_port: u16) -> Result<(ServerRunner
     let socket = UdpSocket::bind(addr).await?;
 
     Ok((
-        ServerRunner::new(rx, socket, tx_online),
+        ServerRunner::new(rx, socket, tx_online, crypto),
         ServerHandle::new(tx, rx_online),
     ))
 }

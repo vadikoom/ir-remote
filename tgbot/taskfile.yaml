@@ -8,5 +8,6 @@ tasks:
       IR_LISTEN_IP: 127.0.0.1
       IR_LISTEN_PORT: 4944
       BOT_AUTHORIZED_USERS: "{{.BOT_AUTHORIZED_USERS_V2}}"
+      IR_SHARED_SECRET: "{{.FIRMWARE_SHARED_SECRET}}"
     cmds:
       - cargo run

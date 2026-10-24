@@ -40,11 +40,14 @@ uint64 nextTimeSendStatus = 0;
 void setup() {
     Logger.println("Starting up...");
     Logger.println("WIFI_SSID: " + String(FIRMWARE_WIFI_SSID));
-    Logger.println("WIFI_PASS: " + String(FIRMWARE_WIFI_PASS));
     Logger.println("LOCAL_UDP_PORT: " + String(LOCAL_UDP_PORT));
     Logger.println("REMOTE_UDP_PORT: " + String(REMOTE_UDP_PORT));
     Logger.println("remoteHost: " + String(FIRMWARE_REMOTE_HOST));
     
+    if (!crypto.isValid()) {
+        Logger.println("Invalid shared key: expected 64 hexadecimal characters");
+        while (true) delay(1000);
+    }
     network.Connect();
 }
 
@@ -54,9 +57,7 @@ void loop() {
     size_t len = network.Receive(iobuffer, sizeof(iobuffer));
     
     if (len > 0) {
-        bool successfullDecrypt = crypto.decrypt(iobuffer, len, json);
-        if (successfullDecrypt) {
-            application.consumeCommand(json);
+        if (crypto.decrypt(iobuffer, len, json) && application.consumeCommand(json)) {
             nextTimeSendStatus = now;
         }
     }
@@ -65,6 +66,6 @@ void loop() {
         nextTimeSendStatus = now + IDLE_PING_INTERVAL;
         application.reportStatus(json);
         size_t len = crypto.encrypt(json, iobuffer, sizeof(iobuffer));
-        network.Send(iobuffer, len);
+        if (len > 0) network.Send(iobuffer, len);
     }   
 }

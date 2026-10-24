@@ -13,6 +13,7 @@ tasks:
       - defer: { task: clean_env }
       - ssh {{.UPLOAD_VIA}} 'mkdir -p {{.REMOTE_DIR_NAME}}'
       - scp .env {{.UPLOAD_VIA}}:{{.REMOTE_DIR_NAME}}/.env
+      - ssh {{.UPLOAD_VIA}} 'chmod 600 {{.REMOTE_DIR_NAME}}/.env'
       - scp docker-compose.yaml {{.UPLOAD_VIA}}:{{.REMOTE_DIR_NAME}}/docker-compose.yaml
 
   run:
@@ -29,11 +30,14 @@ tasks:
 
   generate_env:
     desc: Generate the .env file
+    silent: true
     cmds:
       - echo 'IMG_NAME={{.IMG_NAME}}' > .env
       - echo 'IR_LISTEN_PORT={{.IR_LISTEN_PORT}}' >> .env
       - echo 'BOT_API={{.BOT_API}}' >> .env
       - echo 'BOT_AUTHORIZED_USERS_V2="{{.BOT_AUTHORIZED_USERS_V2}}"' >> .env
+      - echo 'IR_SHARED_SECRET={{.FIRMWARE_SHARED_SECRET}}' >> .env
+      - chmod 600 .env
 
   clean_env:
     desc: Clean up the .env file

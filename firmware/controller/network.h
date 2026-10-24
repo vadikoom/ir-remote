@@ -97,6 +97,10 @@ class Network {
         int Receive(char *buffer, size_t len) {
             int packetSize = this->udp.parsePacket();
             if (packetSize) {
+                if (packetSize > static_cast<int>(len)) {
+                    while (this->udp.available()) this->udp.read();
+                    return 0;
+                }
                 Logger.print("Received packet of size: ");
                 Logger.println(packetSize);
                 int bytesRead = this->udp.read(buffer, len);

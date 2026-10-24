@@ -11,16 +11,31 @@ class Application {
             irsend.begin();
         }
 
-        void consumeCommand(DynamicJsonDocument &json) {
-            int number = json["sequence"];
+        bool consumeCommand(DynamicJsonDocument &json) {
+            if (!json["sequence"].is<uint32_t>() || !json["data"].is<JsonArray>()) {
+                return false;
+            }
+            uint32_t number = json["sequence"];
+            JsonArray data = json["data"];
+            if (number == 0 || number == UINT32_MAX || data.size() == 0 ||
+                data.size() > sizeof(commandBuffer) / sizeof(commandBuffer[0])) {
+                return false;
+            }
+            for (JsonVariant value : data) {
+                if (!value.is<uint16_t>() || value.as<uint16_t>() == 0) {
+                    return false;
+                }
+            }
             Logger.print("Consuming command: ");
             Logger.println(number);
 
             if (number > lastCommandId) {
-                lastCommandId = number;
-                size_t commandLen = jsonArrayIntoCommandBuffer(json["data"], commandBuffer, sizeof(commandBuffer));
+                size_t commandLen = jsonArrayIntoCommandBuffer(data, commandBuffer,
+                    sizeof(commandBuffer) / sizeof(commandBuffer[0]));
                 executeCommand(commandBuffer, commandLen);
+                lastCommandId = number;
             }
+            return true;
         }
 
         void reportStatus(DynamicJsonDocument &json) {
@@ -31,7 +46,7 @@ class Application {
 
     private:
         size_t jsonArrayIntoCommandBuffer(JsonArray array, uint16_t *buffer, size_t bufferLen) {
-            int i = 0;
+            size_t i = 0;
             for (JsonVariant v : array) {
                 if (i >= bufferLen) {
                     Logger.println("Command buffer overflow!");
@@ -58,7 +73,7 @@ class Application {
         IRsend irsend;
 
         uint16_t commandBuffer[300];
-        int lastCommandId = 0;
+        uint32_t lastCommandId = 0;
 };
 
 #endif
