@@ -43,7 +43,8 @@ The container listens on UDP port 12000, published as `IR_LISTEN_PORT` (4944 in 
 The firmware sends to port 4944 on `FIRMWARE_REMOTE_HOST`; that address must be reachable from the device.
 Existing `.vadikk.com.env` configurations remain supported; `.env` takes precedence when both files exist.
 
-For the transmitter, the default board is NodeMCU ESP8266. Connect your IR transmitter circuit to GPIO2,
+For the transmitter, the default target is an ESP8266 with 1MB flash and NodeMCU-style automatic reset.
+Connect your IR transmitter circuit to GPIO2,
 set the upload port in [`firmware/taskfile.yaml`](firmware/taskfile.yaml), and run:
 
 ```sh
@@ -67,4 +68,24 @@ the controller uses 115200.
 
 Run `cargo test --locked` inside `tgbot/` for IR signal, authorization, timer, Telegram API, and UDP checks.
 Run `cargo clippy --all-targets --locked -- -D warnings` for Rust lint checks, or `task firmware:test`
-for the capture decoder diagnostic. Capture diagnostics print decoded data; they are not assertion-based tests.
+for firmware security tests and the capture decoder diagnostic. Security tests use host stubs with address and
+undefined-behavior sanitizers. Capture diagnostics print decoded data; they are not assertion-based tests.
+
+## UDP security
+
+Set `FIRMWARE_SHARED_SECRET` to a random 32-byte key encoded as 64 hexadecimal characters
+(`openssl rand -hex 32`). The tasks pass the same key to the bot as `IR_SHARED_SECRET`.
+Changing the key requires rebuilding/flashing the firmware and restarting the bot with the matching key.
+The key is embedded in the firmware; physical access to flash can reveal it.
+
+Both directions use XChaCha20-Poly1305 with a fresh cryptographically random 24-byte nonce for each packet.
+The binary format is version (1 byte, currently 1), message type (1 byte: command=1, status=2), nonce (24 bytes),
+encrypted UTF-8 JSON, and authentication tag (16 bytes). The version and message type are authenticated as additional
+data. Packets exceeding 2048 bytes, plaintext packets, and failed authentication are rejected before changing state.
+There is no handshake or persistent cryptographic session state. Firmware uses the ESP8266 SDK random source after
+connecting Wi-Fi; the bot uses the operating system random source. Firmware crypto is vendored Monocypher 4.0.2.
+
+Command sequences suppress duplicate IR execution during device uptime. Packet freshness is not guaranteed:
+captured commands can execute after device restart or if they were never received, and captured status packets can
+affect connectivity, acknowledgement, and routing state. This is an accepted limitation of this personal project.
+IR acknowledgement means the transmitter emitted the signal; the appliance does not acknowledge reception.

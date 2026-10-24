@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use bytes::{Buf, BufMut, BytesMut};
+use bytes::BytesMut;
 use futures::{Sink, Stream};
 use serde::{Deserialize, Serialize};
 use tokio::net::UdpSocket;
@@ -18,7 +18,7 @@ pub struct Status {
     pub last_command_sequence_number: u32,
 }
 
-pub struct Codec;
+pub struct Codec(super::crypto::Crypto);
 impl Decoder for Codec {
     type Item = Status;
     type Error = super::Error;
@@ -28,7 +28,12 @@ impl Decoder for Codec {
             return Ok(None);
         }
 
-        Ok(Some(serde_json::from_reader(src.split().reader())?))
+        let plaintext = self.0.open(super::crypto::STATUS, &src.split())?;
+        let status: Status = serde_json::from_slice(&plaintext)?;
+        if status.last_command_sequence_number == u32::MAX {
+            return Err(super::Error::Security("Sequence number exhausted"));
+        }
+        Ok(Some(status))
     }
 }
 
@@ -40,18 +45,32 @@ impl Encoder<Command> for Codec {
         item: Command,
         dst: &mut BytesMut,
     ) -> std::result::Result<(), Self::Error> {
-        serde_json::to_writer(dst.writer(), &item)?;
+        if item.sequence == u32::MAX
+            || item.data.is_empty()
+            || item.data.len() > 300
+            || item
+                .data
+                .iter()
+                .any(|&value| value == 0 || value > u16::MAX as u32)
+        {
+            return Err(super::Error::Security("Invalid IR command"));
+        }
+        let packet = self
+            .0
+            .seal(super::crypto::COMMAND, &serde_json::to_vec(&item)?)?;
+        dst.extend_from_slice(&packet);
         Ok(())
     }
 }
 
 pub fn transport(
     socket: &UdpSocket,
+    crypto: super::crypto::Crypto,
 ) -> (
     impl Stream<Item = super::Result<(Status, SocketAddr)>> + '_,
     impl Sink<(Command, SocketAddr), Error = super::Error> + '_,
 ) {
-    let a = UdpFramed::new(socket, Codec);
-    let b = UdpFramed::new(socket, Codec);
+    let a = UdpFramed::new(socket, Codec(crypto.clone()));
+    let b = UdpFramed::new(socket, Codec(crypto));
     (a, b)
 }

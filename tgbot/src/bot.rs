@@ -191,6 +191,7 @@ impl Interpreter {
             Error::Cancelled => m.command_canceled.clone(),
             Error::CommandNotFound => m.command_not_found.clone(),
             Error::Server(server) => match server {
+                server::Error::Security(_) => m.internal_error.clone(),
                 server::Error::Io(io) => {
                     format!("{}: {:?}", m.internal_error, io)
                 }
@@ -366,7 +367,13 @@ mod tests {
             socket.write_all(response.as_bytes()).await.unwrap();
             body
         });
-        let (_runner, handle) = server::new(std::net::Ipv4Addr::LOCALHOST, 0).await.unwrap();
+        let (_runner, handle) = server::new(
+            std::net::Ipv4Addr::LOCALHOST,
+            0,
+            server::crypto::Crypto::from_hex(server::crypto::TEST_SECRET).unwrap(),
+        )
+        .await
+        .unwrap();
         let bot = Bot::new("12345:TEST").set_api_url(api_url);
         let mut interpreter = Interpreter::new(cfg, bot, message, Delay::new(), handle);
         tokio::time::timeout(Duration::from_secs(5), interpreter.execute_fallible())

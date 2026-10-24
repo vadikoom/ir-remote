@@ -8,6 +8,7 @@ ENV RUSTFLAGS="-Ctarget-feature=-crt-static"
 
 RUN mkdir src && echo "fn main() {println!(\"if you see this, the build broke\")}" > src/main.rs && cargo build --release --locked && rm -r src
 COPY tgbot/src ./src
+COPY tgbot/testdata ./testdata
 COPY tgbot/config.yaml ./
 RUN rm -f target/release/deps/tgbot*
 RUN cargo build --release --locked

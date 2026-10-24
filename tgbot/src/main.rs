@@ -35,7 +35,11 @@ async fn main() {
 
     let cfg = config::get_config();
 
-    let (mut runner, handle) = server::new(bind_address, bind_port).await.unwrap();
+    let crypto = server::crypto::Crypto::from_hex(
+        &std::env::var("IR_SHARED_SECRET").expect("IR_SHARED_SECRET must be defined"),
+    )
+    .expect("Invalid IR_SHARED_SECRET");
+    let (mut runner, handle) = server::new(bind_address, bind_port, crypto).await.unwrap();
 
     info!("Starting bot with default configuration");
     select! {

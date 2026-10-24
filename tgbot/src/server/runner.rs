@@ -15,6 +15,7 @@ pub struct ServerRunner {
     rx: mpsc::Receiver<(MpcRequest, oneshot::Sender<MpcResponse>)>,
     socket: UdpSocket,
     state: ServerState,
+    crypto: crypto::Crypto,
 }
 
 impl ServerRunner {
@@ -22,19 +23,27 @@ impl ServerRunner {
         rx: mpsc::Receiver<(MpcRequest, oneshot::Sender<MpcResponse>)>,
         socket: UdpSocket,
         online: watch::Sender<bool>,
+        crypto: crypto::Crypto,
     ) -> Self {
         Self {
             rx,
             socket,
             state: ServerState::new(online),
+            crypto,
         }
     }
 
     #[instrument(name = "ServerRunner::run", skip_all)]
     pub async fn run(&mut self) -> Result<()> {
         info!("Starting server IO loop");
-        let Self { rx, socket, state } = self;
-        let (mut transport_input, mut transport_output) = transport::transport(&*socket);
+        let Self {
+            rx,
+            socket,
+            state,
+            crypto,
+        } = self;
+        let (mut transport_input, mut transport_output) =
+            transport::transport(&*socket, crypto.clone());
         let mut last_from = None;
 
         loop {
@@ -59,7 +68,7 @@ impl ServerRunner {
                         Err(error) => {
                             warn!(?error, "Failed to send command; retrying until acknowledgement deadline");
                             // UdpFramed retains a failed datagram until its buffer is replaced.
-                            transport_output = transport::transport(&*socket).1;
+                            transport_output = transport::transport(&*socket, crypto.clone()).1;
                         }
                     }
                     state.send_attempted();
@@ -363,13 +372,25 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn failed_udp_send_does_not_poison_following_commands() {
-        let (mut runner, handle) = super::super::new(Ipv4Addr::LOCALHOST, 0).await.unwrap();
+    async fn rejected_oversized_command_does_not_poison_following_commands() {
+        let (mut runner, handle) = super::super::new(
+            Ipv4Addr::LOCALHOST,
+            0,
+            crypto::Crypto::from_hex(crypto::TEST_SECRET).unwrap(),
+        )
+        .await
+        .unwrap();
         let addr = runner.socket.local_addr().unwrap();
         let device = UdpSocket::bind("127.0.0.1:0").await.unwrap();
         let task = tokio::spawn(async move { runner.run().await });
         device
-            .send_to(br#"{"last_command_sequence_number":0}"#, addr)
+            .send_to(
+                &crypto::Crypto::from_hex(crypto::TEST_SECRET)
+                    .unwrap()
+                    .seal(crypto::STATUS, br#"{"last_command_sequence_number":0}"#)
+                    .unwrap(),
+                addr,
+            )
             .await
             .unwrap();
         tokio::time::timeout(Duration::from_secs(2), async {
@@ -391,11 +412,23 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(
-            serde_json::from_slice::<serde_json::Value>(&buf[..len]).unwrap(),
+            serde_json::from_slice::<serde_json::Value>(
+                &crypto::Crypto::from_hex(crypto::TEST_SECRET)
+                    .unwrap()
+                    .open(crypto::COMMAND, &buf[..len])
+                    .unwrap()
+            )
+            .unwrap(),
             serde_json::json!({"data": [100, 200], "sequence": 2})
         );
         device
-            .send_to(br#"{"last_command_sequence_number":2}"#, addr)
+            .send_to(
+                &crypto::Crypto::from_hex(crypto::TEST_SECRET)
+                    .unwrap()
+                    .seal(crypto::STATUS, br#"{"last_command_sequence_number":2}"#)
+                    .unwrap(),
+                addr,
+            )
             .await
             .unwrap();
         tokio::time::timeout(Duration::from_secs(2), call)
@@ -412,13 +445,25 @@ mod tests {
 
     #[tokio::test]
     async fn udp_round_trip_retries_and_recovers_after_transmitter_reconnect() {
-        let (mut runner, handle) = super::super::new(Ipv4Addr::LOCALHOST, 0).await.unwrap();
+        let (mut runner, handle) = super::super::new(
+            Ipv4Addr::LOCALHOST,
+            0,
+            crypto::Crypto::from_hex(crypto::TEST_SECRET).unwrap(),
+        )
+        .await
+        .unwrap();
         let addr = runner.socket.local_addr().unwrap();
         let device = UdpSocket::bind("127.0.0.1:0").await.unwrap();
         let task = tokio::spawn(async move { runner.run().await });
         device.send_to(b"invalid JSON", addr).await.unwrap();
         device
-            .send_to(br#"{"last_command_sequence_number":41}"#, addr)
+            .send_to(
+                &crypto::Crypto::from_hex(crypto::TEST_SECRET)
+                    .unwrap()
+                    .seal(crypto::STATUS, br#"{"last_command_sequence_number":41}"#)
+                    .unwrap(),
+                addr,
+            )
             .await
             .unwrap();
         tokio::time::timeout(Duration::from_secs(2), async {
@@ -429,6 +474,17 @@ mod tests {
         .await
         .unwrap();
 
+        let attacker = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        attacker
+            .send_to(br#"{"last_command_sequence_number":1000}"#, addr)
+            .await
+            .unwrap();
+        let forged = crypto::Crypto::from_hex(&"ff".repeat(32))
+            .unwrap()
+            .seal(crypto::STATUS, br#"{"last_command_sequence_number":1000}"#)
+            .unwrap();
+        attacker.send_to(&forged, addr).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(20)).await;
         let sender = handle.clone();
         let mut call = tokio::spawn(async move { sender.send_rc(&[100, 200, 300]).await });
         let mut buf = [0; 2048];
@@ -437,7 +493,13 @@ mod tests {
                 .await
                 .unwrap()
                 .unwrap();
-            let wire: serde_json::Value = serde_json::from_slice(&buf[..len]).unwrap();
+            let wire: serde_json::Value = serde_json::from_slice(
+                &crypto::Crypto::from_hex(crypto::TEST_SECRET)
+                    .unwrap()
+                    .open(crypto::COMMAND, &buf[..len])
+                    .unwrap(),
+            )
+            .unwrap();
             assert_eq!(
                 wire,
                 serde_json::json!({"data": [100, 200, 300], "sequence": 42})
@@ -447,7 +509,13 @@ mod tests {
             .await
             .is_err());
         device
-            .send_to(br#"{"last_command_sequence_number":42}"#, addr)
+            .send_to(
+                &crypto::Crypto::from_hex(crypto::TEST_SECRET)
+                    .unwrap()
+                    .seal(crypto::STATUS, br#"{"last_command_sequence_number":42}"#)
+                    .unwrap(),
+                addr,
+            )
             .await
             .unwrap();
         tokio::time::timeout(Duration::from_secs(2), call)
@@ -458,7 +526,13 @@ mod tests {
 
         let reconnected = UdpSocket::bind("127.0.0.1:0").await.unwrap();
         reconnected
-            .send_to(br#"{"last_command_sequence_number":42}"#, addr)
+            .send_to(
+                &crypto::Crypto::from_hex(crypto::TEST_SECRET)
+                    .unwrap()
+                    .seal(crypto::STATUS, br#"{"last_command_sequence_number":42}"#)
+                    .unwrap(),
+                addr,
+            )
             .await
             .unwrap();
         let call = tokio::spawn(async move { handle.send_rc(&[400, 500]).await });
@@ -468,11 +542,23 @@ mod tests {
                 .unwrap()
                 .unwrap();
         assert_eq!(
-            serde_json::from_slice::<serde_json::Value>(&buf[..len]).unwrap(),
+            serde_json::from_slice::<serde_json::Value>(
+                &crypto::Crypto::from_hex(crypto::TEST_SECRET)
+                    .unwrap()
+                    .open(crypto::COMMAND, &buf[..len])
+                    .unwrap()
+            )
+            .unwrap(),
             serde_json::json!({"data": [400, 500], "sequence": 43})
         );
         reconnected
-            .send_to(br#"{"last_command_sequence_number":43}"#, addr)
+            .send_to(
+                &crypto::Crypto::from_hex(crypto::TEST_SECRET)
+                    .unwrap()
+                    .seal(crypto::STATUS, br#"{"last_command_sequence_number":43}"#)
+                    .unwrap(),
+                addr,
+            )
             .await
             .unwrap();
         tokio::time::timeout(Duration::from_secs(2), call)
